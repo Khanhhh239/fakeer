@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+*.safetensors
+*.bin
+model_outputs/
+kaggle_datasets/
+*.log
+.DS_Store
