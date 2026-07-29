@@ -51,16 +51,27 @@ class CascadeClassifier:
             )
             print(f"  ✓ Encoded {len(self.icd_embeddings)} ICD terms")
     
+    # Cột THẬT của icd10_vi_full.csv là 'code','term' (xem kb/README.md).
+    # Đây đúng loại lỗi đã khiến branch_c đọc df['name'] rồi âm thầm tụt từ
+    # 129.690 xuống 68 tên — nên ở đây dò cột và BÁO LỖI nếu không thấy,
+    # thay vì để KeyError rơi vào một except nào đó rồi chạy tiếp với KB rỗng.
+    ICD_TERM_COLS = ('term', 'name', 'label')
+
     def load_icd(self, path: str):
         """Load ICD-10 Vietnamese KB"""
         print(f"Loading ICD-10 KB from {path}")
         df = pd.read_csv(path)
-        
-        # Assuming columns: code, name
+
+        col = next((c for c in self.ICD_TERM_COLS if c in df.columns), None)
+        if col is None:
+            raise KeyError(
+                f"{path}: không tìm thấy cột tên bệnh. Có {list(df.columns)}, "
+                f"cần một trong {self.ICD_TERM_COLS}")
+
         for _, row in df.iterrows():
             code = str(row['code']).strip()
-            name = str(row['name']).strip()
-            
+            name = str(row[col]).strip()
+
             self.icd_codes.append(code)
             self.icd_names.append(name)
             

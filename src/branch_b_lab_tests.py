@@ -18,6 +18,8 @@ trước nó là TÊN. Đo được: 11/11 xét nghiệm thật, 0 rác, offset 
 import re
 from typing import List, Dict, Tuple
 
+from span_candidates import unresolved_regions, gen_candidates_for_regions
+
 # Bước 1: Tách đoạn — cắt ở \n, ;, :, dấu chấm câu, và dấu phẩy KHÔNG nằm giữa
 # hai chữ số ("4,49 T/l" là số thập phân tiếng Việt, cắt ở đó là hỏng).
 SPLIT = re.compile(r'(?<!\d),(?!\d)|[;:\n]|(?<=[a-zA-ZÀ-ỹ])\.(?=\s|$)')
@@ -133,6 +135,27 @@ def extract_lab_pairs(text: str) -> List[Dict]:
     return entities
 
 
+def lab_va_candidates(text: str, resolved: List[Dict] = None) -> List[Dict]:
+    """
+    Sinh ứng viên cho bước VÁ — thay cho việc thêm luật regex mới mỗi khi
+    gặp một dạng viết khác (huyết áp "130/76 mmHg", panel dính liền
+    "WBC : 14.99 G/L NEUT%...", mũi tên "Troponin I/T ↑", giá trị không đơn
+    vị "PT - INR: 1.05", giá trị lồng trong câu văn "lipase ... 623").
+
+    KHÔNG tự phân loại — chỉ trả về ứng viên. Phân loại cần
+    llm_choice_classifier.ChoiceClassifier với model đã nạp (cần GPU).
+
+    Args:
+        text: bệnh án gốc
+        resolved: kết quả extract_lab_pairs(text) đã chạy trước — vùng đã
+            được luật Tier-0 nhận sẽ KHÔNG sinh ứng viên chồng lên.
+    """
+    resolved = resolved or extract_lab_pairs(text)
+    claimed = [(e['start'], e['end']) for e in resolved]
+    regions = unresolved_regions(text, claimed)
+    return gen_candidates_for_regions(text, regions)
+
+
 # --------------------------------------------------------------------------
 # TEST — mỗi ca nêu rõ SỐ thực thể mong đợi, nên không thể "pass rỗng".
 # Bản trước chỉ lặp qua kết quả rồi assert offset; khi không trích được gì
@@ -195,5 +218,50 @@ def test_branch_b():
     print(f"✓ Branch B: {len(cases)}/{len(cases)} ca PASS")
 
 
+def test_lab_va_candidates():
+    """
+    6 dạng đã đo được là luật Tier-0 bỏ sót thật trên bệnh án thật (16/100
+    file). Kiểm: (a) vùng đã được Tier-0 nhận đúng thì KHÔNG sinh ứng viên
+    chồng lên, (b) vùng Tier-0 bỏ sót thì ứng viên PHẢI chứa span đúng.
+    """
+    cases = [
+        ('Huyết áp:130/76 mmHg', ['130/76 mmHg']),
+        ('WBC : 14.99 G/L NEUT% : 82.9 % (Tăng)', ['WBC', '14.99 G/L', 'NEUT%']),
+        ('Troponin I/T ↑ (chẩn đoán nhồi máu)', ['Troponin I/T', '↑']),
+        ('PT - INR: 1.05', ['PT - INR', '1.05']),
+        ('lipase là tăng lên ở mức 623 (lần nhập viện trước)', ['lipase', '623']),
+        ('tbr là cao tới 1.0 sau đó cải thiện', ['tbr', '1.0']),
+    ]
+    failed = 0
+    for text, must_have in cases:
+        cands = {c['text'] for c in lab_va_candidates(text)}
+        miss = [m for m in must_have if m not in cands]
+        if miss:
+            print(f"  ✗ {text!r}\n      THIẾU: {miss}")
+            failed += 1
+        else:
+            print(f"  ✓ {text!r} -> vá phủ đủ {must_have}")
+
+    # ca ĐÃ sạch (Tier-0 bắt trọn) -> vá không sinh ứng viên chồng lên
+    clean = "Ure: 6,4 mmol/l"
+    resolved = extract_lab_pairs(clean)
+    assert len(resolved) == 2, "case sạch: Tier-0 phải bắt được 2 thực thể"
+    va = lab_va_candidates(clean, resolved)
+    overlap = [c for c in va if any(
+        c['start'] < e['end'] and e['start'] < c['end'] for e in resolved)]
+    if overlap:
+        print(f"  ✗ vùng đã sạch vẫn sinh {len(overlap)} ứng viên chồng lên Tier-0")
+        failed += 1
+    else:
+        print(f"  ✓ case sạch (Tier-0 bắt trọn): vá không sinh ứng viên thừa")
+
+    print(f"\n{'='*60}")
+    if failed:
+        raise AssertionError(f"lab_va_candidates: {failed} ca THẤT BẠI")
+    print(f"✓ lab_va_candidates: {len(cases)+1}/{len(cases)+1} ca PASS")
+
+
 if __name__ == "__main__":
     test_branch_b()
+    print()
+    test_lab_va_candidates()

@@ -44,6 +44,30 @@ def test_branch_c():
     from branch_c_drugs import test_branch_c_rules
     test_branch_c_rules()
 
+def test_span_candidates():
+    """Test sinh ung vien tong quat (thay cho viec them regex moi tung ca)"""
+    print(chr(10) + "="*60)
+    print("TEST: Span Candidates (generic)")
+    print("="*60)
+    from span_candidates import test_span_candidates as _run
+    _run()
+
+def test_lab_va():
+    """Test ung vien va cho nhanh B — 6 dang regex tung bo sot"""
+    print(chr(10) + "="*60)
+    print("TEST: Lab patch candidates")
+    print("="*60)
+    from branch_b_lab_tests import test_lab_va_candidates as _run
+    _run()
+
+def test_llm_choice():
+    """Test phan khong-can-GPU cua bo phan loai N-lua-chon"""
+    print(chr(10) + "="*60)
+    print("TEST: LLM Choice Classifier (non-GPU parts)")
+    print("="*60)
+    from llm_choice_classifier import test_llm_choice_classifier as _run
+    _run()
+
 def test_ner_metrics():
     """Test F1 mức thực thể (thay seqeval — gói đó vỡ trên Python 3.12 của Kaggle)"""
     print("\n" + "="*60)
@@ -105,6 +129,9 @@ def run_all_tests():
         ("Text Alignment", test_text_alignment),
         ("Branch B", test_branch_b),
         ("Branch C", test_branch_c),
+        ("Span Candidates", test_span_candidates),
+        ("Lab Patch Cands", test_lab_va),
+        ("LLM Choice", test_llm_choice),
         ("NER Metrics", test_ner_metrics),
         ("Overlap Resolver", test_overlap_resolver),
         ("Real Data", test_on_real_data),
