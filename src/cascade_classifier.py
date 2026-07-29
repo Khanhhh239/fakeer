@@ -174,10 +174,15 @@ class CascadeClassifier:
         self,
         span_text: str,
         context: str = "",
-        llm_client = None
+        llm_classifier = None
     ) -> Tuple[str, float, str]:
         """
         Chạy toàn bộ cascade.
+        
+        Args:
+            span_text: Text to classify
+            context: Surrounding context
+            llm_classifier: LLMClassifier object từ llm_classifier.py
         
         Returns:
             (label, confidence, tier_used)
@@ -194,37 +199,86 @@ class CascadeClassifier:
             return result, 1.0, 'tier2_kb'
         
         # Tier 3: LLM
-        label, confidence = self.tier3_llm(span_text, context, llm_client)
-        return label, confidence, 'tier3_llm'
+        if llm_classifier is not None:
+            try:
+                label, confidence = llm_classifier.classify(span_text, context)
+                return label, confidence, 'tier3_llm'
+            except Exception as e:
+                print(f"⚠️ LLM tier 3 failed: {e}")
+                # Fallback
+                return 'TRIỆU_CHỨNG', 0.5, 'tier3_default'
+        else:
+            # No LLM available - default
+            return 'TRIỆU_CHỨNG', 0.5, 'tier3_default'
     
     def classify_batch(
         self,
         spans: List[Dict],
-        llm_client = None
+        llm_classifier = None
     ) -> List[Dict]:
         """
         Classify a batch of spans.
         
         Args:
             spans: List of dicts with keys: text, (optional) context
+            llm_classifier: LLMClassifier object từ llm_classifier.py
         
         Returns:
             Updated spans with keys: type, tier, confidence
         """
         results = []
+        tier3_spans = []  # Spans cần LLM
+        tier3_indices = []  # Indices trong results
         
         for span in spans:
             span_text = span['text']
             context = span.get('context', '')
             
-            label, confidence, tier = self.classify(span_text, context, llm_client)
+            # Try tier 1
+            result = self.tier1_chapter_r(span_text)
+            if result:
+                span_updated = span.copy()
+                span_updated['type'] = result
+                span_updated['tier'] = 'tier1_kb'
+                span_updated['confidence'] = 1.0
+                results.append(span_updated)
+                continue
             
+            # Try tier 2
+            result = self.tier2_high_similarity(span_text)
+            if result:
+                span_updated = span.copy()
+                span_updated['type'] = result
+                span_updated['tier'] = 'tier2_kb'
+                span_updated['confidence'] = 1.0
+                results.append(span_updated)
+                continue
+            
+            # Need tier 3
+            tier3_spans.append({'text': span_text, 'context': context})
+            tier3_indices.append(len(results))
+            
+            # Placeholder
             span_updated = span.copy()
-            span_updated['type'] = label
-            span_updated['tier'] = tier
-            span_updated['confidence'] = confidence
-            
+            span_updated['type'] = 'TRIỆU_CHỨNG'
+            span_updated['tier'] = 'tier3_default'
+            span_updated['confidence'] = 0.5
             results.append(span_updated)
+        
+        # Run LLM batch nếu có
+        if tier3_spans and llm_classifier is not None:
+            try:
+                llm_results = llm_classifier.classify_batch(tier3_spans)
+                
+                # Update results
+                for idx, llm_result in zip(tier3_indices, llm_results):
+                    results[idx]['type'] = llm_result['type']
+                    results[idx]['tier'] = 'tier3_llm'
+                    results[idx]['confidence'] = llm_result['confidence']
+            
+            except Exception as e:
+                print(f"⚠️ LLM batch classification failed: {e}")
+                # Keep defaults
         
         return results
 
