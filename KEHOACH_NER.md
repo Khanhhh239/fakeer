@@ -393,16 +393,48 @@ SPLIT = re.compile(r'(?<!\d),(?!\d)|[;:\n]|(?<=[a-zA-ZÀ-ỹ])\.(?=\s|$)')
 
 Coi `:` là ranh giới đoạn có chủ ý — `Ure: 6,4 mmol/l` tự tách thành `Ure` + `6,4 mmol/l`, **đúng hai thực thể cần tách**.
 
-**Bước 2 — bắt cặp tên/giá trị:**
+**Bước 2 — ghép theo ĐOẠN LIỀN KỀ, không ghép bằng regex bên trong một đoạn.**
+
+> ⚠️ Bản đầu của tài liệu này **sai và tự mâu thuẫn**: bước 1 tách đoạn ở `:` (nên
+> `Ure: 6,4 mmol/l` thành **hai đoạn riêng**), rồi bước 2 lại đưa regex ghép cặp *bên trong*
+> một đoạn. Đã tách rồi thì trong đoạn không còn cặp nào để ghép.
+>
+> Làm theo bản sai đó cho kết quả **bắt 0/11 xét nghiệm thật** trên bệnh án mẫu, đồng thời
+> sinh rác vì nhánh thứ hai của regex khớp mọi đoạn kết thúc bằng số:
+> `TÊN='Bệnh nhân nam' KẾT_QUẢ='17 tuổi'` · `TÊN='1.  Medrol' KẾT_QUẢ='16mg x 3 viên'`
+> · `TÊN='uống' KẾT_QUẢ='8h sáng sau ăn no'`.
+
+**Luật đúng:** đoạn nào **LÀ** "số + đơn vị y khoa" thì đó là `KẾT_QUẢ_XÉT_NGHIỆM`,
+và **đoạn ngay trước nó** là `TÊN_XÉT_NGHIỆM`.
+
 ```python
-_SEP = re.compile(r'^(.{1,40}?)\s*[:\-=–]\s*([\d.,]+\s*[a-zA-ZÀ-ỹ/%µ]*)$'
-                  r'|^(.{1,40}?)\s+([\d.,]+\s*[a-zA-ZÀ-ỹ/%µ]*)$')
+UNIT = (r'(?:mmol/l|micromol/l|µmol/l|umol/l|mol/l|g/l|mg/dl|mg/l|g/dl|'
+        r'T/l|G/l|U/l|UI/l|IU/l|ng/ml|pg/ml|µg/l|mcg/l|mmHg|%|kg|cm|mm|ml|dl)')
+
+# một đoạn LÀ giá trị khi nó CHỈ gồm (dấu so sánh) số (đơn vị)
+VALUE_ONLY = re.compile(r'^[<>≤≥]?\s*\d+(?:[.,]\d+)?\s*' + UNIT + r'\.?$', re.I)
+
+# giá trị định tính: "(-)", "(+)", "âm tính", "dương tính"
+VALUE_QUAL = re.compile(r'^\(\s*[-+–±]{1,3}\s*\)$|^(?:âm tính|dương tính)$', re.I)
 ```
-Khi làm sạch phần tên: **không được `rstrip('-')`** — `Cl-`, `HCO3-` là tên ion, dấu trừ là một phần của tên. Đã từng mất điểm vì lỗi này. Dùng:
-```python
-def clean_name(n):
-    return n.strip().lstrip(':-=–').rstrip(':=–').strip()
-```
+
+**Danh sách trắng đơn vị là bắt buộc.** Không có nó thì `17 tuổi`, `1 tháng`, `8h sáng`,
+`3 viên` đều lọt vào.
+
+Điều kiện thêm cho đoạn đứng trước mới được nhận là tên: dài ≤ 40 ký tự, có ít nhất một
+chữ cái, và bản thân nó không phải một giá trị.
+
+**Hai bẫy về dấu trừ — cả hai đều đã xảy ra thật:**
+
+1. Khi làm sạch tên, **không `rstrip('-')`** — `Cl-`, `HCO3-` là tên ion.
+2. **Không đưa `-` vào lớp ký tự phân cách** của bất kỳ regex nào. Bản trước dùng
+   `[:\-=–]` làm phân cách, nên `Cl- 98 mmol/l` bị cắt thành tên `Cl` — mất dấu trừ.
+   Đây đúng là lỗi mà comment trong code cảnh báo, nhưng vá ở `clean_name` trong khi
+   lỗi nằm ở regex. Vá sai chỗ thì cảnh báo vô dụng.
+
+**Đã đo sau khi sửa:** 11/11 xét nghiệm thật trên bệnh án mẫu (`Ure`, `Creatinin`, `HC`,
+`HST`, `Na+`, `K+`, `Cl-`, `Ca++`, `Albumin`, `Triglycerid`, `Protein`), **0 rác**, offset
+khớp nguyên văn trên **cả 100 file**. Trước khi sửa: 34 thực thể toàn rác, 750 trên 100 file.
 
 **Bước 3 — Qwen vá đúng hai ca luật không bắt được:**
 - tên xét nghiệm **không kèm giá trị**: `protein niệu 24h`, `siêu âm ổ bụng`, `điện giải đồ`
@@ -421,8 +453,10 @@ Chạy trên **văn bản gốc**, không qua tách từ.
 1. **Khớp tên** — quét mọi n-gram ≤ 5 từ trong văn bản, đối chiếu từ điển RxNorm đã chuẩn hoá (bỏ dấu, thường hoá). Ưu tiên khớp **dài nhất**.
 2. **Nối hàm lượng** — nếu ngay sau tên có hàm lượng thì span **kết thúc ngay sau hàm lượng**:
    ```python
+# '%' phải để NGOÀI nhóm có \b: '%' và khoảng trắng đều là ký tự KHÔNG phải
+# chữ, nên \b giữa chúng không bao giờ khớp -> "Glucose 5% x 1000ml" bị trượt.
 STRENGTH = re.compile(r'^\s*\d+(?:[.,]\d+)?\s*'
-                      r'(?:mg|g|mcg|µg|ml|l|ui|iu|%)\b', re.I)
+                      r'(?:(?:mg|g|mcg|µg|ml|l|ui|iu)\b|%)', re.I)
 ```
    `Medrol 16mg x 3 viên, uống 8h sáng` → span đúng là `Medrol 16mg`. Phần `x 3 viên, uống…` **nằm ngoài**.
 3. **Vá bằng LLM** — tên không có trong RxNorm (biệt dược Việt Nam) thì từ điển bỏ sót. Sinh ứng viên n-gram từ các dòng **thuộc mục đơn thuốc chưa được khớp**, hỏi Qwen chọn `THUỐC` / `KHÔNG_PHẢI`. Vẫn là chọn, không phải sinh.
@@ -508,6 +542,11 @@ Xuất ra `/kaggle/working/ner_output.json`.
 | 11 | **Bỏ qua chuẩn hoá NFC khi so ký tự** | **20/100 file hỏng ánh xạ** | Văn bản đề là **NFD**, PyVi trả **NFC** — dùng `dense_chars` ở Mục 4.2 |
 | 12 | Căn từ đã tách theo **số token thô** | lệch từ token thứ 3 trở đi (`'tuổi'`→`'tuổi,'`) | Căn theo **ký tự**, xem Mục 4.2 |
 | 13 | Train nhãn `DRUG` từ ViMQ | 686 mẫu, sai miền (`sữa Anlene`) | Dùng từ điển RxNorm, Mục 4.5 |
+| 15 | Ghép cặp tên/giá trị **bên trong** một đoạn sau khi đã tách ở `:` | bắt **0/11** xét nghiệm, sinh 34 rác | ghép theo **đoạn liền kề**, Mục 4.4 |
+| 16 | Đưa `-` vào lớp ký tự phân cách regex | `Cl-` mất dấu trừ dù `clean_name` đã đúng | `-` không bao giờ là phân cách |
+| 17 | `\b` sau `%` trong regex hàm lượng | `Glucose 5%` không khớp | để `%` ngoài nhóm có `\b` |
+| 18 | `except` nuốt lỗi khi nạp KB | RxNorm tụt **129.690 → 68** tên, vẫn báo chạy bình thường | nạp KB hỏng thì **dừng hẳn** |
+| 19 | Test chỉ lặp qua kết quả rồi assert | trích 0 thực thể vẫn báo PASS (**pass rỗng**) | mỗi ca phải nêu **số** thực thể mong đợi |
 | 14 | Dùng ViHealthBERT với `word_ids()` | `ValueError: not available when using non-fast tokenizers` | Dùng ViPubmedDeBERTa, Mục 3.3 |
 
 ### 6.1 Ba việc phải làm ĐẦU TIÊN, trước khi viết code chính

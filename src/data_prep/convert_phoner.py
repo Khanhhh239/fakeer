@@ -42,10 +42,15 @@ def parse_conll(content: str) -> List[Tuple[List[str], List[str]]]:
                 current_tokens = []
                 current_labels = []
         else:
-            parts = line.split('\t')
+            # PhoNER_COVID19 dùng DẤU CÁCH, KHÔNG phải tab.
+            # Đã kiểm trên bản phát hành: 0/56.283 dòng có ký tự tab.
+            # Dùng split('\t') thì mọi dòng cho parts=[line] -> len<2 -> bị bỏ
+            # hết -> converter trả về 0 câu mà KHÔNG báo lỗi, và training âm
+            # thầm chạy chỉ trên ViMQ. split() không tham số ăn cả tab lẫn space.
+            parts = line.split()
             if len(parts) >= 2:
                 token = parts[0]
-                label = parts[1]
+                label = parts[-1]   # nhãn luôn là cột CUỐI trong CoNLL
                 current_tokens.append(token)
                 current_labels.append(label)
     

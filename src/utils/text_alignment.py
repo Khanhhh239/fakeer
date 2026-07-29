@@ -73,17 +73,24 @@ def test_alignment():
         print(f"Words: {words}")
         print(f"Spans: {spans}")
         
-        if ok:
-            # Verify reconstruction
-            reconstructed = []
-            for (start, end) in spans:
-                reconstructed.append(text[start:end])
-            print(f"Reconstructed: {reconstructed}")
-            
-            # Check if matches
-            assert ' '.join(words).replace('_', '') == ''.join(reconstructed).replace(' ', ''), \
-                f"Mismatch: {words} vs {reconstructed}"
-        
+        assert ok, f"ánh xạ offset HỎNG cho: {text!r}"
+
+        reconstructed = [text[s:e] for (s, e) in spans]
+        print(f"Reconstructed: {reconstructed}")
+
+        # Bất biến 1: từng từ khớp lát cắt tương ứng.
+        # PyVi nối âm tiết bằng '_' còn văn bản gốc dùng khoảng trắng, nên phải
+        # quy về cùng dạng trước khi so — bản trước quên bỏ khoảng trắng ở vế
+        # trái nên báo sai trên chính ví dụ "Hội chứng thận hư".
+        import unicodedata as _ud
+        norm = lambda s: _ud.normalize('NFC', s).replace('_', '').replace(' ', '')
+        for w, sl in zip(words, reconstructed):
+            assert norm(w) == norm(sl), f"Lệch: từ {w!r} vs lát cắt {sl!r}"
+
+        # Bất biến 2: ghép mọi lát cắt phải ra đúng toàn bộ ký tự không-trắng
+        assert norm(''.join(reconstructed)) == norm(text), \
+            f"Không phủ hết văn bản: {text!r}"
+
     print("\n✓ All alignment tests passed!")
 
 

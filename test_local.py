@@ -6,8 +6,16 @@ Chạy script này TRƯỚC KHI push lên git.
 import sys
 import os
 
+# Console Windows mặc định là cp1252 -> in tiếng Việt sẽ ném UnicodeEncodeError
+# và làm sập cả bộ test trước khi chạy được ca nào. Ép UTF-8 ngay từ đầu.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # Add src to path
-sys.path.insert(0, 'src')
+sys.path.insert(0, "src")
 
 def test_text_alignment():
     """Test ánh xạ offset"""
@@ -33,8 +41,17 @@ def test_branch_c():
     print("TEST 3: Branch C (Drugs)")
     print("="*60)
     
-    from branch_c_drugs import test_branch_c
-    test_branch_c()
+    from branch_c_drugs import test_branch_c_rules
+    test_branch_c_rules()
+
+def test_ner_metrics():
+    """Test F1 mức thực thể (thay seqeval — gói đó vỡ trên Python 3.12 của Kaggle)"""
+    print("\n" + "="*60)
+    print("TEST: NER Metrics (entity F1)")
+    print("="*60)
+
+    from utils.ner_metrics import test_ner_metrics as _run
+    _run()
 
 def test_overlap_resolver():
     """Test giải quyết chồng lấn"""
@@ -88,6 +105,7 @@ def run_all_tests():
         ("Text Alignment", test_text_alignment),
         ("Branch B", test_branch_b),
         ("Branch C", test_branch_c),
+        ("NER Metrics", test_ner_metrics),
         ("Overlap Resolver", test_overlap_resolver),
         ("Real Data", test_on_real_data),
     ]
