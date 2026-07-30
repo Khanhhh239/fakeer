@@ -1,170 +1,155 @@
-# Medical NER Vietnamese - Encoder + Cascade
+# Medical NER Vietnamese - 5 Types
 
-Hệ thống trích xuất thực thể y khoa từ bệnh án tiếng Việt.
+Repo này dùng cho bài toán trích xuất thực thể y khoa từ văn bản/bệnh án tiếng Việt. Đầu ra là JSON gồm đúng 5 loại:
 
-## Kiến trúc
+| type | nghĩa | ví dụ |
+|---|---|---|
+| `TRIỆU_CHỨNG` | biểu hiện bệnh nhân khai hoặc bác sĩ quan sát | `sốt cao`, `đau bụng`, `khó thở` |
+| `CHẨN_ĐOÁN` | tên bệnh hoặc hội chứng | `viêm phổi`, `thiếu men G6PD`, `bệnh Kawasaki` |
+| `THUỐC` | tên thuốc, kèm hàm lượng nếu đứng liền sau | `Medrol 16mg`, `Furosemid 40 mg` |
+| `TÊN_XÉT_NGHIỆM` | tên xét nghiệm/chỉ số/thăm dò | `Ure`, `Creatinin`, `WBC` |
+| `KẾT_QUẢ_XÉT_NGHIỆM` | giá trị đo được | `6,4 mmol/l`, `14.99 G/L`, `âm tính` |
 
-```
-Văn bản bệnh án
-   │
-   ├── NHÁNH A: Triệu chứng & Chẩn đoán
-   │   ├─ Tách từ + ánh xạ offset (PyVi)
-   │   ├─ Encoder BIO → SYM_DIS
-   │   └─ Thác 3 bậc → TRIỆU_CHỨNG | CHẨN_ĐOÁN
-   │
-   ├── NHÁNH B: Xét nghiệm (luật regex)
-   │   └─ TÊN_XÉT_NGHIỆM + KẾT_QUẢ_XÉT_NGHIỆM
-   │
-   └── NHÁNH C: Thuốc (từ điển RxNorm)
-       └─ THUỐC
-   │
-   └─ Hợp nhất + khử chồng lấn → JSON
-```
+Các span phải là lát cắt nguyên văn từ văn bản gốc (`text[start:end] == entity["text"]`). Vì sai type và trích thừa bị phạt nặng, pipeline ưu tiên độ chắc chắn hơn là sinh thêm span bừa.
 
-## 5 Loại Thực Thể
+## Trạng thái hiện tại
 
-1. **TRIỆU_CHỨNG** - biểu hiện bệnh nhân khai/bác sĩ quan sát
-2. **CHẨN_ĐOÁN** - tên bệnh hoặc hội chứng
-3. **THUỐC** - tên thuốc + hàm lượng
-4. **TÊN_XÉT_NGHIỆM** - tên xét nghiệm/chỉ số
-5. **KẾT_QUẢ_XÉT_NGHIỆM** - giá trị đo được
+- Notebook train Kaggle đã train đủ 10 epoch trong log ngày 2026-07-29 và đạt `eval_f1 = 0.8203216033558611` trên dev. Lỗi cuối cùng là `NameError: classification_report is not defined`; đã sửa bằng metric tự viết `entity_f1/format_report`, không cần `seqeval`.
+- Notebook inference đã sửa lỗi keyword cascade: `classify_batch(..., llm_classifier=None)` thay cho tham số sai `llm_client`.
+- Notebook inference đã đổi `REPO_URL` sang repo thật: `https://github.com/Khanhhh239/fakeer.git`.
+- Root docs cũ/trùng/lỗi thời đã được dọn. README này là tài liệu chính; `kb/README.md` mô tả riêng các file KB.
 
-## Cấu trúc thư mục
+## Cấu trúc
 
-```
-├── src/
-│   ├── utils/
-│   │   ├── text_alignment.py          # Ánh xạ offset (CRITICAL!)
-│   │   └── overlap_resolver.py        # Giải quyết chồng lấn
-│   ├── data_prep/
-│   │   ├── convert_phoner.py          # Convert PhoNER_COVID19
-│   │   └── convert_vimq.py            # Convert ViMQ
-│   ├── branch_b_lab_tests.py          # Nhánh B - xét nghiệm
-│   ├── branch_c_drugs.py              # Nhánh C - thuốc
-│   └── cascade_classifier.py          # Thác 3 bậc
-├── notebooks/
-│   ├── train_ner_encoder.ipynb        # Training notebook (Kaggle)
-│   └── ner_inference_e2e.ipynb        # Inference notebook (Kaggle)
-├── input/                              # 100 bệnh án test
-├── requirements.txt
-└── README.md
+```text
+src/
+  data_prep/
+    convert_phoner.py          # PhoNER_COVID19 -> BIO SYM_DIS
+    convert_vimq.py            # ViMQ -> BIO SYM_DIS
+  utils/
+    text_alignment.py          # PyVi + offset map về văn bản gốc
+    ner_metrics.py             # entity-level strict F1, thay seqeval
+    overlap_resolver.py        # weighted interval scheduling
+  branch_b_lab_tests.py        # TÊN_XÉT_NGHIỆM + KẾT_QUẢ_XÉT_NGHIỆM
+  branch_c_drugs.py            # THUỐC bằng RxNorm + luật hàm lượng
+  cascade_classifier.py        # SYM_DIS -> TRIỆU_CHỨNG / CHẨN_ĐOÁN
+  llm_choice_classifier.py     # lựa chọn N nhãn bằng vLLM, chưa chạy GPU thật
+  negation_detector.py         # gắn negated/assertion
+notebooks/
+  train_ner_encoder.ipynb
+  ner_inference_e2e.ipynb
+kb/
+  icd10_vi_full.csv
+  icd10_en.csv
+  rxnorm_merged.csv
+  inn_usan.csv
+input/
+  1.txt ... 100.txt
 ```
 
-## Setup Local (Test)
+## Pipeline Train
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+Notebook: `notebooks/train_ner_encoder.ipynb`.
 
-# Test các module
-python src/utils/text_alignment.py
-python src/branch_b_lab_tests.py
-python src/branch_c_drugs.py
-python src/utils/overlap_resolver.py
-```
+1. Cài `transformers`, `datasets`, `pyvi`, `accelerate` trên Kaggle.
+2. Clone repo `Khanhhh239/fakeer.git`, tìm `src/data_prep`.
+3. Tải và convert 2 nguồn dữ liệu:
+   - PhoNER_COVID19: chỉ giữ `SYMPTOM_AND_DISEASE`, map thành `SYM_DIS`; các type khác -> `O`.
+   - ViMQ: span là word index inclusive `[i, j]`; chỉ giữ `SYMPTOM_AND_DISEASE`; `medical_procedure` và `drug` -> `O`.
+4. Gộp train/dev, tokenizer bằng `manhtt-079/vipubmed-deberta-base`.
+5. Căn nhãn subword:
+   - subword đầu tiên của mỗi từ giữ nhãn BIO;
+   - subword sau và special token đặt `-100`.
+6. Train `AutoModelForTokenClassification` với 3 nhãn: `O`, `B-SYM_DIS`, `I-SYM_DIS`.
+7. Đánh giá bằng entity-level strict F1 trong `src/utils/ner_metrics.py`.
+8. Lưu `/kaggle/working/ner_encoder/` gồm model, tokenizer, `label_map.json`, `metrics.json`.
 
-## Workflow Kaggle
+Lưu ý Kaggle:
 
-### 1. Training (Notebook 1)
+- Không dùng `seqeval`; Kaggle Python 3.12 có thể vỡ metadata/install.
+- Không truyền `classifier_dropout` cho DeBERTaV2; tham số này không hợp với `DebertaV2ForTokenClassification`.
+- Với `transformers` mới, `Trainer` dùng `processing_class=tokenizer`, không dùng `tokenizer=`.
 
-**Môi trường:** Kaggle GPU (T4 x2 hoặc P100), Internet ON
+## Pipeline Inference
 
-**Steps:**
-1. Tải PhoNER_COVID19 + ViMQ từ GitHub
-2. Convert sang BIO format thống nhất (chỉ giữ SYM_DIS)
-3. Train ViPubmedDeBERTa với siêu tham số từ paper
-4. Save model weights + metrics
+Notebook: `notebooks/ner_inference_e2e.ipynb`.
 
-**Output:** `/kaggle/working/ner_encoder/` → Upload thành Kaggle Dataset
+1. Dán văn bản bệnh án vào biến `TEXT`.
+2. Nhánh B chạy trực tiếp trên văn bản gốc:
+   - tách đoạn theo `\n`, `;`, `:`, dấu phẩy không nằm giữa hai chữ số;
+   - đoạn dạng `số + đơn vị y khoa` hoặc `âm tính/dương tính/(+)` -> `KẾT_QUẢ_XÉT_NGHIỆM`;
+   - đoạn ngay trước, nếu ngắn và có chữ, -> `TÊN_XÉT_NGHIỆM`.
+3. Nhánh C chạy trực tiếp trên văn bản gốc:
+   - nạp RxNorm/INN-USAN;
+   - quét n-gram tên thuốc;
+   - nối hàm lượng ngay sau tên thuốc;
+   - thuốc ngoài RxNorm có dạng `TênRiêng + hàm lượng` được bắt bằng luật `rule_strength`.
+4. Nhánh A:
+   - PyVi tách từ và `text_alignment.py` giữ offset về văn bản gốc;
+   - encoder BIO sinh span `SYM_DIS`;
+   - `cascade_classifier.py` tách `SYM_DIS` thành `TRIỆU_CHỨNG` hoặc `CHẨN_ĐOÁN`:
+     - tier 1: ICD chương R -> `TRIỆU_CHỨNG`;
+     - tier 2: ICD ngoài chương R, cosine >= 0.93 -> `CHẨN_ĐOÁN`;
+     - tier 3: hiện notebook để `llm_classifier=None`, nên fallback là `TRIỆU_CHỨNG`.
+5. Hợp nhất nhánh A/B/C bằng `overlap_resolver.py`, chọn tập span không chồng lấn có tổng score tốt nhất.
+6. Checklist bắt buộc:
+   - span nguyên văn;
+   - không chồng lấn;
+   - type thuộc đúng 5 loại;
+   - không span rỗng;
+   - offset hợp lệ.
+7. Xuất `/kaggle/working/ner_output.json`.
 
-**F1 mong đợi:** ~80% (ViMQ-NER benchmark)
-
-### 2. Inference (Notebook 2)
-
-**Môi trường:** Kaggle GPU hoặc CPU, Internet ON
-
-**Kaggle Datasets cần add:**
-1. NER encoder weights (từ notebook 1)
-2. `icd10_vi_full.csv` - KB ICD-10 tiếng Việt
-3. `rxnorm_merged.csv` + `inn_usan.csv` - KB thuốc
-
-**Input:** Paste văn bản bệnh án vào cell 2
-
-**Output:** `/kaggle/working/ner_output.json`
+Schema:
 
 ```json
 {
   "text": "...",
   "entities": [
     {
-      "text": "Hội chứng thận hư",
+      "text": "viêm phổi",
       "type": "CHẨN_ĐOÁN",
-      "start": 89,
-      "end": 106,
-      "score": 0.97,
+      "start": 120,
+      "end": 129,
+      "score": 1.0,
       "source": "encoder+kb"
     }
   ]
 }
 ```
 
-## Kiểm tra chất lượng
+## Cách chạy Kaggle
 
-Notebook 2 có checklist tự động (cell 9):
+Train:
 
-✓ Span nguyên văn (exact match với văn bản gốc)  
-✓ Không chồng lấn  
-✓ Type hợp lệ (chỉ 5 loại)  
-✓ Không span rỗng  
-✓ Offset hợp lệ  
+```text
+1. Upload notebooks/train_ner_encoder.ipynb lên Kaggle.
+2. Settings: GPU T4 x2 hoặc P100, Internet ON.
+3. Run All.
+4. Sau khi xong, download /kaggle/working/ner_encoder/.
+5. Upload folder đó thành Kaggle Dataset để dùng cho inference.
+```
 
-## Data Sources
+Inference:
 
-- **PhoNER_COVID19** (NAACL 2021) - 10 type, chỉ dùng SYMPTOM_AND_DISEASE
-- **ViMQ** (ICONIP 2021) - 3 type, chỉ dùng SYMPTOM_AND_DISEASE
-- **ICD-10 Tiếng Việt** - 14,792 mã / 17,094 tên
-- **RxNorm** - 83,320 RxCUI / 129,690 tên thuốc
+```text
+1. Upload notebooks/ner_inference_e2e.ipynb lên Kaggle.
+2. Add Dataset chứa ner_encoder từ bước train.
+3. Add Dataset chứa kb/*.csv.
+4. Sửa MODEL_PATH/RXNORM_PATH/INN_USAN_PATH/ICD_PATH nếu tên Kaggle Dataset khác mặc định trong notebook.
+5. Dán bệnh án vào TEXT.
+6. Run All.
+```
 
-## Model
+## Kiểm thử local
 
-- **Encoder:** `manhtt-079/vipubmed-deberta-base` (86M parameters)
-- **Embedding:** `AITeamVN/Vietnamese_Embedding` (cho cascade)
-- **LLM (optional):** `Qwen/Qwen3-8B` hoặc `Qwen/Qwen2.5-7B-Instruct`
+```bash
+pip install -r requirements.txt
+python test_local.py
+```
 
-## Ràng buộc
+`test_local.py` kiểm các phần không cần GPU: alignment, lab, drug, span candidates, metric, overlap và vài mẫu input thật. LLM/vLLM cần GPU thật nên không được coi là đã nghiệm thu nếu chỉ chạy local CPU.
 
-- ✓ Self-host only (no API calls)
-- ✓ Model ≤ 9B parameters
-- ✓ Span nguyên văn từng ký tự
-- ✓ Sai type → phạt 2x
-- ✓ Trích thừa → phạt 3x
+## Ghi chú từ test data
 
-## Tham khảo
-
-Kế hoạch chi tiết: `KEHOACH_NER.md`
-
-## Lưu ý quan trọng
-
-### Ánh xạ offset (text_alignment.py)
-- Đã test 100/100 file: PASS
-- KHÔNG bỏ qua `assert ok == False`
-- PHẢI chuẩn hóa NFC trước khi so sánh
-
-### Encoder
-- Chỉ train SYM_DIS (không train DRUG từ ViMQ - sai miền)
-- Tokenizer PHẢI là fast (có `word_ids()`)
-- ViHealthBERT không dùng được (tokenizer không fast)
-
-### Thác phân loại
-- Ngưỡng 0.93 từ 30 mẫu (chưa kiểm chứng đầy đủ)
-- Bậc 1+2 quyết được 60% ở độ chính xác 100%
-- Bậc 3 cần LLM (hiện tại default TRIỆU_CHỨNG)
-
-### Từ điển thuốc
-- RxNorm không có biệt dược Việt Nam
-- Cần add manually vào `vietnamese_drugs`
-- Ví dụ: Medrol, Zestril, Vastarel, Nitralmyl
-
-## License
-
-MIT
+Đã đọc nhiều mẫu trong `input/`: có bài tư vấn y khoa dài, bullet, bệnh án nhập viện, thuốc bị ẩn bằng `*******`, chỉ số không có đơn vị, tiếng Việt có dấu/khác chuẩn và phủ định kiểu `Phủ nhận đau ngực`. Vì vậy pipeline không nên gom tất cả vào một model sinh tự do; cách ba nhánh hiện tại giúp giữ offset nguyên văn và kiểm soát false positive tốt hơn.

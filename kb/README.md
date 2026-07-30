@@ -1,16 +1,16 @@
 # KB — ICD-10 và RxNorm
 
 Bốn file dưới đây là cơ sở dữ liệu đã dựng sẵn, dùng cho **Nhánh A bậc 1–2** (tách triệu chứng/bệnh)
-và **Nhánh C** (khớp tên thuốc) trong `KEHOACH_NER.md`.
+và **Nhánh C** (khớp tên thuốc) trong pipeline inference.
 
 Mọi file đều là CSV UTF-8, có dòng tiêu đề.
 
 | file | dòng | khoá duy nhất | cột | dùng ở đâu |
 |---|---|---|---|---|
-| `icd10_vi_full.csv` | 14.627 | 14.627 mã ICD | `code,term` | Mục 4.3 — thác tách `SYM_DIS` |
-| `icd10_en.csv` | 71.704 | 71.704 | `code,term` | Mục 4.3 — **tuỳ chọn**, bí danh tiếng Anh |
-| `rxnorm_merged.csv` | 129.690 | **83.320 RxCUI** | `code,term` | Mục 4.5 — từ điển thuốc |
-| `inn_usan.csv` | 36 | 36 | `form,usan` | Mục 4.5 — cầu nối INN↔USAN |
+| `icd10_vi_full.csv` | 14.627 | 14.627 mã ICD | `code,term` | thác tách `SYM_DIS` |
+| `icd10_en.csv` | 71.704 | 71.704 | `code,term` | **tuỳ chọn**, bí danh tiếng Anh |
+| `rxnorm_merged.csv` | 129.690 | **83.320 RxCUI** | `code,term` | từ điển thuốc |
+| `inn_usan.csv` | 36 | 36 | `form,usan` | cầu nối INN↔USAN |
 
 ## Từng file
 
@@ -25,9 +25,9 @@ Crawler dùng duyệt **đệ quy theo tầng**, không phải duyệt phẳng 4
 **sót nguyên chương C (u bướu)** — chỉ ra 4 mã C, thiếu cả `C50` (ung thư vú) — vì chương u bướu
 và chương nguyên nhân ngoại sinh lồng sâu hơn 4 tầng.
 
-**Chương R = "Triệu chứng, dấu hiệu"** — đây là tín hiệu để tách triệu chứng khỏi bệnh (Mục 4.3).
+**Chương R = "Triệu chứng, dấu hiệu"** — đây là tín hiệu để tách triệu chứng khỏi bệnh.
 Nhưng chương R **chỉ có 495 tên trên tổng 17.094**, nên nó chỉ dùng được ở vùng nó chắc chắn,
-không dùng để phán cho mọi span. Chi tiết và số đo ở Mục 4.3.
+không dùng để phán cho mọi span.
 
 ### `icd10_en.csv` — bí danh tiếng Anh
 ```

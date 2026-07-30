@@ -1,169 +1,234 @@
-# Trạng thái dự án & Cách hoạt động — Medical NER Vietnamese
+# Bàn giao — Medical NER Vietnamese
 
-> Bản này thay cho bản "100% COMPLETE" trước — bản đó có 2 nhánh bắt sai gần hết
-> (0/11 xét nghiệm, RxNorm tụt còn 68 từ) và bộ test có ca "pass rỗng" (báo PASS dù
-> trích được 0 thực thể) mà vẫn tự nhận hoàn thành. Bản này chỉ ghi điều **đã chạy
-> và thấy kết quả**, không ghi điều "chắc là ổn".
+> Tài liệu này viết cho **agent tiếp theo chưa có ngữ cảnh gì**. Chỉ ghi điều **đã chạy và
+> thấy kết quả**. Chỗ nào chưa chạy thì ghi rõ "CHƯA" — đừng suy ra là đã xong.
+>
+> Bản trước của file này tự nhận "100% COMPLETE / All tests passing" trong khi 2 nhánh
+> bắt sai gần hết và bộ test có ca "pass rỗng". Đừng lặp lại: **chỉ tick khi có log**.
 
-## 1. Trạng thái từng phần — đã kiểm bằng cách chạy thật
+---
+
+## 1. Trạng thái — cái gì XONG, cái gì CHƯA
 
 | phần | trạng thái | bằng chứng |
 |---|---|---|
-| Nhánh B — xét nghiệm | ✅ đúng | `36.txt`: 11/11 tên xét nghiệm thật, 0 rác, offset khớp nguyên văn trên cả 100 file |
-| Nhánh C — thuốc | ✅ đúng | `36.txt`: 4/4 thuốc (`Medrol 16mg`, `Omez 20mg`, `Furosemid 40 mg`, `Zestril 10mg`), offset khớp trên cả 100 file |
-| Ánh xạ offset (PyVi + NFC) | ✅ đúng | 100/100 file, không lệch |
-| `ner_metrics.py` (thay seqeval) | ✅ đúng | 7/7 test tay + chạy thật trong `Trainer.compute_metrics` |
-| Chuyển dữ liệu train (PhoNER + ViMQ) | ✅ đúng | PhoNER 5.027/2.000/3.000 câu, ViMQ 7.000/1.000/1.000 câu |
-| Nạp model + 1 bước train + eval | ✅ đúng | chạy thật trên CPU với `manhtt-079/vipubmed-deberta-base`, ra loss + F1 hợp lệ |
-| Overlap resolver (QHĐ) | ✅ đúng | chọn `sốt cao` bỏ `sốt`, đúng thiết kế |
-| `negation_detector.py` | ✅ đúng, **nhưng API 2 bước** | 10/10 test riêng; đo lại trên `36.txt`: `suy thận`/`thiếu máu`/`viêm họng cấp` → `negated`, `Hội chứng thận hư` → `affirmed`. Xem lưu ý cách gọi ở Mục 4.4 |
-| `llm_classifier.py` (Tier 3) | ⚠️ **chưa chạy được lần nào** | chỉ mới kiểm cú pháp + import OK. Cần GPU, chưa test — đừng tin nhãn "Manual test OK" ở bản cũ, không rõ nó test cái gì |
-| Train encoder trên Kaggle (GPU thật, full epoch) | ⚠️ **chưa chạy** | mọi thứ đã kiểm ở quy mô nhỏ trên CPU; chưa có lần chạy đủ 10 epoch / dữ liệu đầy đủ trên GPU |
+| **Train encoder** | ✅ **XONG** | Kaggle T4×2, 10 epoch, 3760 step, 31 phút. **dev F1 = 0.8203** (P 0.802 / R 0.839) |
+| Chuyển dữ liệu PhoNER + ViMQ | ✅ xong | 12.027 câu train / 3.000 dev / 4.000 test |
+| Nhánh B — xét nghiệm (luật) | ✅ đúng phần cấu trúc `Tên: Giá_trị` | `36.txt` 11/11 tên, 0 rác, offset khớp 100/100 file |
+| Nhánh B — các dạng khác | ⚠️ **BỎ SÓT 16/100 file** | xem Mục 4 — đã có giải pháp, **chưa nối** |
+| Nhánh C — thuốc | ✅ đúng | `36.txt` 4/4 thuốc, offset khớp 100/100 file |
+| Ánh xạ offset PyVi + NFC | ✅ đúng | 100/100 file |
+| `ner_metrics.py` | ✅ đúng | 7/7 test + chạy thật trong `Trainer` |
+| Overlap resolver (QHĐ) | ✅ đúng | test riêng pass |
+| `negation_detector.py` | ✅ đúng, **API 2 bước** | 10/10 test; xem cách gọi ở Mục 5.4 |
+| `span_candidates.py` (mới) | ✅ đúng | 6/6 ca, phủ 100% các dạng nhánh B bỏ sót |
+| `llm_choice_classifier.py` (mới) | ⚠️ **CHƯA chạy GPU** | chỉ test phần logic; `classify_candidates()` chưa gọi model thật lần nào |
+| **Nối nhánh A vào inference** | ❌ **CHƯA LÀM** | có weight rồi nhưng `ner_inference_e2e.ipynb` chưa dùng |
+| **Gold thủ công** | ❌ **CHƯA CÓ** | mọi ngưỡng (0.93, τ) đều từ mẫu tự chọn |
 
-## 2. Ba lỗi vừa sửa trong `train_ner_encoder.ipynb` — vì sao chúng xảy ra
+**Việc tiếp theo quan trọng nhất: Mục 4 (vá nhánh B) và Mục 6 (nối nhánh A).**
 
-Log training thật đầu tiên vỡ ở cell 6 với:
+---
+
+## 2. Kết quả training — đọc cho đúng
+
 ```
-TypeError: DebertaV2ForTokenClassification.__init__() got an unexpected keyword argument 'classifier_dropout'
+eval_f1: 0.8203    eval_precision: 0.8022    eval_recall: 0.8393
+train_loss: 0.1546    3760 step / 10 epoch / 1865s
 ```
 
-**Nguyên nhân:** siêu tham số `classifier_dropout: 0.2` trong `KEHOACH_NER.md` chép thẳng từ repo tham chiếu — nhưng đó là tham số kiểu **BERT/RoBERTa**. Đã kiểm thật: `DebertaV2Config` không có field này, chỉ có `hidden_dropout_prob` dùng **chung cho toàn bộ encoder** (8 chỗ trong mã nguồn HF), không tách riêng cho đầu phân loại. DeBERTaV2 không có khái niệm "classifier dropout" độc lập. Sửa: bỏ hẳn tham số này, dùng dropout mặc định của checkpoint đã pretrain (0.1).
+**0.82 này KHÔNG phải điểm thi.** Nó đo trên dev của PhoNER + ViMQ, tức **trong miền của
+chúng**: PhoNER là tin tức COVID, ViMQ là câu hỏi bệnh nhân tự viết. Miền đích của ta là
+**bệnh án lâm sàng** — khác cả hai. Paper gốc đạt 80.65 trên ViMQ-NER nên 82 là hợp lý,
+nhưng ra ngoài miền sẽ thấp hơn, chưa biết bao nhiêu.
 
-Sửa xong, chạy tiếp lộ lỗi thứ hai:
-```
-TypeError: Trainer.__init__() got an unexpected keyword argument 'tokenizer'
-```
-`transformers` bản cài trên Kaggle (5.3.0) đã đổi tên `tokenizer=` thành `processing_class=` trong `Trainer`. Sửa: đổi tên tham số.
+Cảnh báo `missing keys ... LayerNorm.weight/bias` + `unexpected keys ... LayerNorm.beta/gamma`
+là **bình thường**, không phải lỗi: checkpoint dùng tên cũ `beta/gamma`, transformers mới dùng
+`weight/bias`. LayerNorm vẫn được nạp đúng — nếu không thì F1 đã không đạt 0.82.
 
-Cả hai lỗi đã **chạy thật lại từ đúng nội dung notebook** (không phải đoán rồi sửa mù): nạp model 183.757.059 tham số, `Trainer` khởi tạo được, `train()` + `evaluate()` chạy ra kết quả hợp lệ.
+---
 
-**Lỗi thứ ba, chỉ cảnh báo, chưa chặn:** `warmup_ratio` bị đánh dấu deprecated ở bản `transformers` mới hơn. Hiện tại (5.3.0) vẫn chạy được, chỉ in cảnh báo. Không sửa vì chưa hỏng — nhưng nếu Kaggle tự nâng cấp `transformers` sau này mà lỗi này tái xuất hiện thì đây là nguyên nhân.
-
-## 3. Pipeline — cách hoạt động, đúng theo `KEHOACH_NER.md`
-
-### 3.1 Tổng quan 3 nhánh độc lập
+## 3. Kiến trúc — 3 nhánh độc lập
 
 ```
 văn bản thô
    │
-   ├── NHÁNH A — triệu chứng & chẩn đoán
-   │   PyVi tách từ + giữ ánh xạ offset  (src/utils/text_alignment.py)
-   │       ↓
-   │   encoder BIO (ViPubmedDeBERTa fine-tune) → span SYM_DIS  [CHƯA TRAIN XONG]
-   │       ↓
-   │   thác 3 bậc → TRIỆU_CHỨNG | CHẨN_ĐOÁN     (src/cascade_classifier.py)
+   ├── NHÁNH A — triệu chứng & chẩn đoán            [encoder XONG, chưa nối inference]
+   │   PyVi tách từ + giữ ánh xạ offset  (utils/text_alignment.py)
+   │       ↓  encoder BIO → span SYM_DIS
+   │       ↓  ánh xạ ngược về offset văn bản gốc
+   │   thác 3 bậc → TRIỆU_CHỨNG | CHẨN_ĐOÁN         (cascade_classifier.py)
    │
-   ├── NHÁNH B — xét nghiệm (src/branch_b_lab_tests.py)
-   │   luật ghép "đoạn liền kề" → TÊN_XÉT_NGHIỆM + KẾT_QUẢ_XÉT_NGHIỆM
+   ├── NHÁNH B — xét nghiệm                          (branch_b_lab_tests.py)
+   │   luật "đoạn liền kề" → TÊN_XÉT_NGHIỆM + KẾT_QUẢ_XÉT_NGHIỆM
+   │   + bước VÁ bằng ứng viên (span_candidates.py) [CHƯA NỐI]
    │
-   └── NHÁNH C — thuốc (src/branch_c_drugs.py)
-       khớp từ điển RxNorm + luật cấu trúc (thuốc ngoài từ điển) → THUỐC
+   └── NHÁNH C — thuốc                               (branch_c_drugs.py)
+       từ điển RxNorm + luật cấu trúc → THUỐC
    │
-   ├── negation_detector.py — gắn assertion (affirmed/negated) cho từng thực thể
-   └── overlap_resolver.py  — quy hoạch động, chọn tập không chồng lấn, điểm cực đại
+   ├── negation_detector.py  → affirmed / negated
+   └── utils/overlap_resolver.py → QHĐ chọn tập không chồng lấn
    │
    └──→ JSON 5 type
 ```
 
-### 3.2 NHÁNH B — xét nghiệm, chi tiết cách nó ra kết quả
+**Nguyên lý xuyên suốt, rút ra từ đo đạc — đừng vi phạm:**
 
-Nguyên lý: **không ghép tên/giá trị bằng regex bên trong một đoạn** (bước tách đoạn đã cắt ở `:`, nên trong đoạn không còn cặp nào để ghép — đây chính là bug đã sửa). Thay vào đó:
+| đã thử | kết quả đo | kết luận |
+|---|---|---|
+| LLM **sinh tự do** cả 5 type | Qwen3-8B **bịa 274 span** (61% output) | sinh tự do = bịa |
+| Hỏi **từng type riêng** | **0/45 lượt** chịu trả rỗng; 1 span nhận 4 nhãn | mất áp lực cạnh tranh |
+| Prompt có **câu cấm** | phản tác dụng **3/3 lần** | không dùng câu cấm |
+| **Chọn 1 trong N**, ứng viên cắt từ văn bản | bịa bất khả thi về cấu trúc | ✅ dùng cách này |
 
-1. Tách văn bản thành đoạn ở `\n` `;` `:` và dấu phẩy **không nằm giữa hai chữ số** (`4,49` là số thập phân).
-2. Đoạn nào **là** "số + đơn vị y khoa" (`VALUE_ONLY` — danh sách trắng gồm `mmol/l`, `g/l`, `T/l`...) → gán `KẾT_QUẢ_XÉT_NGHIỆM`.
-3. Đoạn **ngay trước nó** → gán `TÊN_XÉT_NGHIỆM`, nếu dài ≤ 40 ký tự và có ít nhất một chữ cái.
+---
 
-Ví dụ thật (`36.txt`): `"Ure: 6,4 mmol/l"` → tách đoạn `"Ure"` + `"6,4 mmol/l"` → đoạn 2 khớp `VALUE_ONLY` → gán `KẾT_QUẢ`, đoạn 1 đứng trước → gán `TÊN`.
+## 4. ⚠️ VIỆC ƯU TIÊN 1 — Nhánh B bỏ sót 16/100 file
 
-### 3.3 NHÁNH C — thuốc, chi tiết cách nó ra kết quả
+Đã quét toàn bộ 100 file bằng một máy dò độc lập rộng hơn. Luật hiện tại chỉ bắt được cấu
+trúc `Tên: <số> <đơn vị>`. **Bốn dạng bị bỏ sót:**
 
-1. **Khớp từ điển**: quét n-gram ≤ 5 từ trong văn bản, đối chiếu 138.361 tên đã nạp từ `rxnorm_merged.csv` (129.690 dòng gốc + biến thể tự sinh: RxNorm ghi kiểu Anh `furosemide`, bệnh án Việt viết `furosemid` — rụng `-e` cuối, nạp cả hai dạng).
-2. **Nối hàm lượng**: nếu ngay sau tên có `<số><đơn vị khối lượng>` (`STRENGTH`, ví dụ `mg`, `g`, `%`) thì span kéo dài đến hết hàm lượng. `Medrol 16mg x 3 viên` → span dừng ở `Medrol 16mg`, không nuốt `x 3 viên`.
-3. **Chất lưỡng dụng** (`DUAL_USE`: `glucose`, `creatinine`, `protein`...) — vừa là thuốc vừa là chỉ số xét nghiệm — chỉ nhận là THUỐC khi có hàm lượng đi kèm. `Glucose 5% x 1000ml` → thuốc; `Glucose máu: 13,2 mmol/l` → không, để nhánh B xử lý.
-4. **Thuốc ngoài từ điển** (`_find_unknown_drugs`): một từ trông như tên riêng đứng ngay trước hàm lượng, không phải từ chức năng (`uống`, `viên`...), không phải chỉ số xét nghiệm → vẫn nhận là THUỐC, với độ tin cậy thấp hơn (`score=0.7` so với `1.0` của khớp từ điển). Đây là cách bắt được `Omez 20mg` — biệt dược Ấn Độ không có trong RxNorm (Mỹ) — bằng **cấu trúc câu**, không cần gọi LLM.
+| dạng | ví dụ thật | vì sao trượt |
+|---|---|---|
+| Huyết áp tỷ lệ (~10 file) | `Huyết áp: 130/76 mmHg` | `VALUE_ONLY` chỉ khớp *một* số, không khớp `số/số` |
+| Panel dính liền | `WBC : 14.99 G/L NEUT% : 82.9 %` | giữa 2 cặp chỉ có khoảng trắng, không phải `\n ; : ,` → dính 1 đoạn |
+| Mũi tên / không đơn vị | `Troponin I/T ↑` · `PT - INR: 1.05` | không có đơn vị trong danh sách trắng |
+| Lồng trong câu văn | `lipase là tăng lên ở mức 623` · `tbr là cao tới 1.0` | không phải cấu trúc `Tên: Giá_trị` |
 
-### 3.4 NHÁNH A — encoder, hiện trạng và cách nó SẼ hoạt động
+**ĐỪNG thêm regex cho từng dạng** — sẽ không bao giờ hết (`↑`, `(-)`, `âm tính`, `2+`…).
+Giải pháp tổng quát **đã viết và đã đo**, chỉ còn nối:
 
-**Vấn đề đã giải quyết (offset):** encoder cần input đã tách từ (`Hẹp động_mạch thận`) vì dữ liệu train (PhoNER, ViMQ) đều ở dạng này. Nhưng bệnh án đầu vào lúc suy luận là **chưa tách**. `text_alignment.py` xây bảng ánh xạ: mỗi từ-đã-tách ↔ khoảng ký tự thật trong văn bản gốc, đi qua **ký tự đã chuẩn hoá NFC** (không qua đếm token thô — cách đó từng lệch vì PyVi tách dấu câu thành token riêng, và văn bản gốc là NFD trong khi PyVi trả NFC).
-
-**Việc còn thiếu:** encoder (`ViPubmedDeBERTa` fine-tune trên PhoNER+ViMQ, nhãn hợp nhất `SYM_DIS`) **chưa được train đủ epoch trên GPU thật**. `notebooks/train_ner_encoder.ipynb` giờ chạy được (đã sửa 3 lỗi ở Mục 2), nhưng chưa có lần chạy nào tạo ra weight cuối cùng.
-
-**Sau khi train xong**, luồng suy luận của nhánh A là:
-1. Tách từ bệnh án bằng PyVi, giữ bảng ánh xạ offset.
-2. Đưa chuỗi từ đã tách qua encoder → nhãn BIO cho từng token (`O` / `B-SYM_DIS` / `I-SYM_DIS`).
-3. Gộp token liền kề cùng nhãn thành span, dùng bảng ánh xạ Mục trên để quy về offset trong văn bản gốc.
-4. Mỗi span `SYM_DIS` đi qua **thác 3 bậc** (`cascade_classifier.py`) để quyết `TRIỆU_CHỨNG` hay `CHẨN_ĐOÁN`:
-   - **Bậc 1**: retrieve vào KB ICD-10, nếu mã top-1 thuộc **chương R** (Triệu chứng, dấu hiệu) → `TRIỆU_CHỨNG`. Đo được: 7/7 đúng trên mẫu thử.
-   - **Bậc 2**: nếu top-1 ngoài chương R và cosine ≥ 0.93 → `CHẨN_ĐOÁN`. Đo được: 11/11 đúng, 0 lọt.
-   - **Bậc 3**: còn lại (≈40%, chưa quyết được bằng KB) → hỏi Qwen chọn nhị phân A/B với constrained decoding. **`llm_classifier.py` implement bậc này nhưng chưa được chạy thử lần nào** — cần GPU.
-
-### 3.5 Gắn phủ định và hợp nhất
-
-`negation_detector.py`: quét cửa sổ 50 ký tự trước mỗi thực thể tìm từ phủ định (`không có`, `phủ nhận`, `âm tính`...), có xử lý ngắt câu (`.`, `;`) và đảo ngược (`nhưng`, `tuy nhiên`) để không phủ định nhầm. **Cách gọi đúng — hai bước:**
 ```python
-annotated = negation_detector.annotate_negation(entities, text)   # BƯỚC 1: gắn 'negated'
-status = negation_detector.get_assertion_status(annotated[0])     # BƯỚC 2: đọc lại
+from branch_b_lab_tests import extract_lab_pairs, lab_va_candidates
+from llm_choice_classifier import ChoiceClassifier
+
+resolved = extract_lab_pairs(text)              # luật bắt phần cấu trúc rõ ràng
+cands    = lab_va_candidates(text, resolved)    # sinh ứng viên CHỈ ở vùng luật bỏ sót
+
+clf = ChoiceClassifier(
+    model_name='Qwen/Qwen3-8B',
+    labels={'A': ('TÊN_XÉT_NGHIỆM', 'tên xét nghiệm hoặc chỉ số'),
+            'B': ('KẾT_QUẢ_XÉT_NGHIỆM', 'giá trị đo được'),
+            'C': ('KHÔNG_PHẢI', 'không thuộc hai loại trên')},
+    document=text,
+    task_instruction='Bạn là bác sĩ. Chọn đúng một nhãn cho cụm từ.')
+va = clf.classify_candidates(cands)             # ⚠️ CHƯA chạy GPU lần nào
+final = resolved + [e for e in va if e['type'] != 'KHÔNG_PHẢI']
 ```
-Gọi `get_assertion_status()` trực tiếp trên entity chưa qua `annotate_negation()` sẽ luôn trả `'affirmed'` — không phải lỗi, chỉ là API 2 bước, dễ dùng sai nếu không biết.
 
-`overlap_resolver.py`: sau khi có toàn bộ thực thể từ cả 3 nhánh, quy hoạch động chọn tập con không chồng lấn có tổng điểm cực đại — đúng bài toán *weighted interval scheduling*, nghiệm tối ưu O(n log n). Đảm bảo mỗi ký tự thuộc tối đa một thực thể.
+**Đã đo (không cần GPU):** `span_candidates.gen_candidates()` phủ **100%** cả 6 dạng trên —
+kể cả `↑` và `1.05`. Tức trần của phương pháp là 100%, việc còn lại chỉ là LLM chọn đúng.
 
-## 4. Schema JSON đầu ra
+**Chưa đo:** LLM chọn có đúng không. Phải chạy rồi mới biết.
+
+---
+
+## 5. Chi tiết từng nhánh
+
+### 5.1 Nhánh B — luật (phần đã xong)
+1. Tách đoạn ở `\n` `;` `:` và dấu phẩy **không giữa hai chữ số** (`4,49` là số thập phân).
+2. Đoạn nào **LÀ** `số + đơn vị y khoa` (danh sách trắng) → `KẾT_QUẢ_XÉT_NGHIỆM`.
+3. **Đoạn ngay trước** → `TÊN_XÉT_NGHIỆM`, nếu ≤40 ký tự và có chữ cái.
+
+Lý do ghép theo **đoạn liền kề** chứ không regex trong đoạn: bước 1 đã cắt ở `:` nên
+`Ure: 6,4 mmol/l` thành hai đoạn — trong đoạn không còn cặp nào để ghép. Bản cũ làm sai chỗ
+này nên bắt **0/11** và sinh rác (`TÊN='Bệnh nhân nam' KẾT_QUẢ='17 tuổi'`).
+
+### 5.2 Nhánh C — thuốc
+1. Khớp n-gram ≤5 từ với **138.361 tên** từ `rxnorm_merged.csv` (129.690 dòng + biến thể
+   rụng `-e`: RxNorm ghi `furosemide`, bệnh án Việt viết `furosemid`).
+2. Nối hàm lượng: `Medrol 16mg x 3 viên` → span dừng ở `Medrol 16mg`.
+3. **Chất lưỡng dụng** (`glucose`, `creatinine`, `protein`…) chỉ là THUỐC khi **có hàm lượng**:
+   `Glucose 5% x 1000ml` → thuốc; `Glucose máu: 13,2 mmol/l` → không.
+4. **Thuốc ngoài từ điển**: tên riêng đứng ngay trước hàm lượng → THUỐC (`score=0.7`).
+   Đây là cách bắt `Omez 20mg` (biệt dược Ấn, không có trong RxNorm) **không cần LLM**.
+
+### 5.3 Nhánh A — thác 3 bậc (sau khi encoder ra span `SYM_DIS`)
+- **Bậc 1**: top-1 ICD thuộc **chương R** → `TRIỆU_CHỨNG`. Đo: 7/7 đúng.
+- **Bậc 2**: ngoài chương R **và** cosine ≥ 0.93 → `CHẨN_ĐOÁN`. Đo: 11/11 đúng, 0 lọt.
+- **Bậc 3**: còn lại (~40%) → LLM chọn nhị phân A/B. **CHƯA chạy.**
+
+Vì sao không dùng KB cho tất cả: chương R chỉ có **495/17.094** tên. Từ ngữ triệu chứng đời
+thường (`nặng mặt`, `tiểu ít`) **không có trong ICD**, retriever không có quyền nói "không có
+trong KB" nên luôn trả hàng xóm gần nhất → đoán bừa thành bệnh.
+
+### 5.4 Phủ định — API 2 BƯỚC, dễ dùng sai
+```python
+annotated = detector.annotate_negation(entities, text)   # BƯỚC 1 gắn 'negated'
+status    = detector.get_assertion_status(annotated[0])  # BƯỚC 2 đọc lại
+```
+Gọi `get_assertion_status()` trực tiếp trên entity **chưa** qua `annotate_negation()` sẽ
+luôn trả `'affirmed'` — nó chỉ đọc field `'negated'` có sẵn, không tự tính.
+
+Đo trên `36.txt`: `suy thận` / `thiếu máu` / `viêm họng cấp` → `negated`;
+`Hội chứng thận hư` → `affirmed`.
+
+---
+
+## 6. ⚠️ VIỆC ƯU TIÊN 2 — Nối nhánh A vào inference
+
+Weight đã có (F1 0.82) nhưng `ner_inference_e2e.ipynb` **chưa dùng**. Các bước:
+
+1. Tải weight từ Kaggle output → upload thành Kaggle Dataset.
+2. Trong notebook inference: `words, spans, ok = segment_with_map(TEXT)` rồi
+   **`assert ok`** — ánh xạ vỡ thì mọi offset sau đó sai âm thầm.
+3. Đưa `words` qua encoder → nhãn BIO → gộp span → dùng `spans[i]` quy về offset gốc.
+4. Mỗi span `SYM_DIS` qua `CascadeClassifier.classify()`.
+5. Hợp nhất 3 nhánh → `annotate_negation` → `select_non_overlapping` → JSON.
+
+**Bug đã biết chưa sửa:** `cascade_classifier.py` đọc `row['name']` nhưng
+`icd10_vi_full.csv` có cột `code,term` → sẽ ném `KeyError: 'name'`. Sửa thành `row['term']`,
+và **đừng bọc `try/except` nuốt lỗi** (bản cũ của nhánh C làm vậy, KB tụt từ 129.690 xuống
+68 tên mà vẫn báo chạy bình thường).
+
+---
+
+## 7. JSON đầu ra
 
 ```json
 {
   "text": "<nguyên văn bệnh án>",
   "entities": [
-    {
-      "text": "Hội chứng thận hư",
-      "type": "CHẨN_ĐOÁN",
-      "start": 89,
-      "end": 106,
-      "score": 0.97,
-      "source": "encoder+kb",
-      "negated": false,
-      "assertion": "affirmed"
-    }
+    {"text": "Hội chứng thận hư", "type": "CHẨN_ĐOÁN", "start": 89, "end": 106,
+     "score": 0.97, "source": "encoder+kb", "negated": false, "assertion": "affirmed"}
   ]
 }
 ```
+`type` ∈ `TRIỆU_CHỨNG` `CHẨN_ĐOÁN` `THUỐC` `TÊN_XÉT_NGHIỆM` `KẾT_QUẢ_XÉT_NGHIỆM`.
+`source`: `rule` (B) · `dict`/`rule_strength` (C) · `encoder+kb`/`encoder+llm` (A).
+**Bất biến bắt buộc:** `text == raw[start:end]`, và không span nào chồng lấn.
 
-`type` ∈ 5 giá trị: `TRIỆU_CHỨNG`, `CHẨN_ĐOÁN`, `THUỐC`, `TÊN_XÉT_NGHIỆM`, `KẾT_QUẢ_XÉT_NGHIỆM`. `source` cho biết thực thể đến từ đâu để debug: `rule` (nhánh B), `dict`/`rule_strength` (nhánh C), `encoder+kb`/`encoder+llm` (nhánh A).
+---
 
-## 5. Việc cần làm tiếp, đúng thứ tự
-
-1. **Train encoder trên Kaggle** — `notebooks/train_ner_encoder.ipynb`, giờ đã chạy được (3 lỗi ở Mục 2 đã sửa và kiểm lại từ đúng nội dung file). Chưa có lần chạy đủ epoch.
-2. **Nối nhánh A vào `ner_inference_e2e.ipynb`** — notebook suy luận đầu-cuối hiện dùng weight nào cho encoder cần trỏ tới Kaggle Dataset của bước 1.
-3. **Chạy thử `llm_classifier.py` trên GPU thật** — hiện mới kiểm cú pháp, chưa có một lần gọi model thành công nào để biết bậc 3 của thác có hoạt động đúng không.
-4. **Xây gold thủ công** trên vài file — mọi ngưỡng hiện tại (0.93, τ các loại) đều rút ra từ mẫu tự chọn, chưa có gì để đo độ chính xác thật.
-
-## 6. Cách chạy
-
-### Train
-```
-1. notebooks/train_ner_encoder.ipynb lên Kaggle
-2. Settings: GPU T4 x2, Internet ON
-3. Factory reset trước khi Run All (nếu session cũ còn thư mục fakeer/ đã clone,
-   git clone sẽ bị bỏ qua và bạn chạy nhầm code cũ)
-4. Tải weight về, upload lại thành Kaggle Dataset
-```
-
-### Suy luận
-```
-1. notebooks/ner_inference_e2e.ipynb lên Kaggle
-2. Add dataset: kb/ (ICD + RxNorm) + weight encoder từ bước train
-3. Dán bệnh án vào cell 2
-4. Run All → /kaggle/working/ner_output.json
-```
-
-## 7. Kiểm chứng local trước khi push
+## 8. Chạy
 
 ```bash
-python test_local.py
+python test_local.py                  # 6/6 phải pass trước khi push
+python src/negation_detector.py       # 10/10, không cần GPU
+python src/span_candidates.py         # 6/6, không cần GPU
+python src/llm_choice_classifier.py   # phần logic, KHÔNG gọi model thật
 ```
-6/6 test: Text Alignment, Branch B, Branch C, NER Metrics, Overlap Resolver, Real Data.
-**Không bao gồm** `negation_detector.py` và `llm_classifier.py` — test hai file đó riêng:
-```bash
-python src/negation_detector.py     # 10/10, không cần GPU
-python src/llm_classifier.py        # cần GPU, CHƯA XÁC NHẬN chạy được
-```
+**Train:** Kaggle T4×2 + Internet ON, **Factory reset trước Run All** (session cũ còn thư
+mục `fakeer/` thì `git clone` bị bỏ qua → chạy nhầm code cũ). ~31 phút.
+
+Notebook clone từ `https://github.com/Khanhhh239/fakeer` — **sửa ở máy phải push mới có
+tác dụng trên Kaggle**. Đã mất một lần chạy vì quên điều này.
+
+---
+
+## 9. Bẫy đã trả giá — đừng lặp lại
+
+| bẫy | hậu quả thật |
+|---|---|
+| `except` nuốt lỗi khi nạp KB | RxNorm 129.690 → **68 tên**, vẫn báo chạy bình thường |
+| Test chỉ lặp qua kết quả rồi assert | trích 0 thực thể vẫn báo PASS (**pass rỗng**) |
+| `split('\t')` trên file CoNLL dùng **dấu cách** | PhoNER ra **0 câu**, train mất nửa dữ liệu, không báo lỗi |
+| `classifier_dropout` trên DeBERTaV2 | `TypeError` — DeBERTaV2 không có field này |
+| `Trainer(tokenizer=...)` | đã đổi thành `processing_class=` |
+| `\b` sau `%` trong regex | `Glucose 5%` không khớp (`%` và space đều không phải ký tự chữ) |
+| `-` trong lớp ký tự phân cách | `Cl-` mất dấu trừ |
+| Đọc sai tên cột CSV rồi đoán | `df['name']` vs thật là `df['term']` — **mở file ra xem** |
+| Thêm tính năng mới khi lõi đang hỏng | bản cũ thêm negation+LLM trong khi nhánh B bắt 0/11 |
+
+**Quy tắc rút ra:** nạp KB / chuyển dữ liệu thất bại thì **dừng hẳn**, đừng chạy tiếp. Mọi
+test phải nêu **số** thực thể mong đợi và có ít nhất một ca **phải trả rỗng**.
