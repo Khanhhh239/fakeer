@@ -47,8 +47,10 @@ def clean_name(n: str) -> str:
     """
     Làm sạch tên xét nghiệm.
     KHÔNG rstrip('-'): "Cl-", "HCO3-" là tên ion, dấu trừ thuộc về tên.
+    LSTRIP thêm '-•·*': gạch đầu dòng trong "- ALT", "• CRP" là ký hiệu liệt
+    kê ở ĐẦU đoạn, không phải một phần tên — khác với '-' ở CUỐI tên ion.
     """
-    return n.strip().lstrip(':=–').rstrip(':=–').strip()
+    return n.strip().lstrip(':=–-•·*').rstrip(':=–').strip()
 
 
 def clean_value(v: str) -> str:
@@ -173,7 +175,10 @@ def lab_va_candidates(text: str, resolved: List[Dict] = None) -> List[Dict]:
 
     def add(s, e):
         t = text[s:e]
-        st = len(t) - len(t.lstrip(' .;,:')); en = len(t) - len(t.rstrip(' .;,:'))
+        # lstrip thêm '-•·*': "- ALT", "• Troponin I/T" nguyên câu bị dính
+        # gạch đầu dòng vào ứng viên, LLM nhận cả gạch làm 1 phần "tên" ->
+        # sai text_score dù type/nghĩa đúng.
+        st = len(t) - len(t.lstrip(' .;,:-•·*')); en = len(t) - len(t.rstrip(' .;,:'))
         s, e = s + st, e - en
         if e <= s or (s, e) in seen:
             return
@@ -246,6 +251,12 @@ def test_branch_b():
         # không dấu cách sau dấu hai chấm
         ("Triglycerid:6,7 mmol/l", 2,
          [('TÊN_XÉT_NGHIỆM', 'Triglycerid'), ('KẾT_QUẢ_XÉT_NGHIỆM', '6,7 mmol/l')]),
+        # gạch đầu dòng / bullet PHẢI bị cắt khỏi tên — nếu không, text sai
+        # so với gold dù type đúng (mất điểm WER dù bắt trúng thực thể)
+        ("- ALT: 45 U/l", 2,
+         [('TÊN_XÉT_NGHIỆM', 'ALT'), ('KẾT_QUẢ_XÉT_NGHIỆM', '45 U/l')]),
+        ("• CRP: 12 mg/l", 2,
+         [('TÊN_XÉT_NGHIỆM', 'CRP'), ('KẾT_QUẢ_XÉT_NGHIỆM', '12 mg/l')]),
         # NHỮNG CA PHẢI TRẢ VỀ RỖNG — đây là chỗ bản trước sinh rác
         ("Bệnh nhân nam 17 tuổi", 0, []),
         ("tức nặng 2 chi dưới", 0, []),
@@ -296,6 +307,9 @@ def test_lab_va_candidates():
         ('PT - INR: 1.05', ['PT - INR', '1.05']),
         ('lipase là tăng lên ở mức 623 (lần nhập viện trước)', ['lipase', '623']),
         ('tbr là cao tới 1.0 sau đó cải thiện', ['tbr', '1.0']),
+        # gạch đầu dòng ở ĐẦU vùng mờ (Tier-0 không bắt vì thiếu đơn vị) —
+        # ứng viên gửi cho LLM phải sạch, không dính '- '/'• '
+        ('- Troponin I/T: 623', ['Troponin I/T', '623']),
     ]
     failed = 0
     for text, must_have in cases:
