@@ -153,7 +153,72 @@ def lab_va_candidates(text: str, resolved: List[Dict] = None) -> List[Dict]:
     resolved = resolved or extract_lab_pairs(text)
     claimed = [(e['start'], e['end']) for e in resolved]
     regions = unresolved_regions(text, claimed)
-    return gen_candidates_for_regions(text, regions)
+
+    # KHÔNG dùng n-gram thô: đo được 572 ứng viên/bệnh án, hầu hết là rác
+    # ngữ pháp ('Bệnh', 'Bệnh nhân nam 17', 'nhân nam'). Gửi 48k thứ đó cho LLM
+    # vừa chậm vừa nguy hiểm — chỉ 1% dương tính giả là 480 thực thể thừa,
+    # mà đề phạt trích thừa GẤP 3. Thà bỏ sót còn hơn.
+    #
+    # Thay bằng luật cấu trúc: một KẾT_QUẢ_XÉT_NGHIỆM luôn CHỨA CHỮ SỐ (hoặc
+    # ↑↓, (-), (+)); một TÊN_XÉT_NGHIỆM luôn ĐỨNG NGAY TRƯỚC phần giá trị đó.
+    # Nên mỗi đoạn chỉ sinh tối đa 3 ứng viên: nguyên đoạn, phần-trước-số,
+    # phần-từ-số. Đo được: 572 -> ~6 ứng viên/bệnh án.
+    SIG = re.compile(r'[\d↑↓]|\([-+–±]{1,3}\)')
+    # lõi giá trị: số (có thể là tỉ lệ 130/76) + đơn vị, HOẶC mũi tên, HOẶC (-)
+    CORE = re.compile(r'[<>≤≥]?\s*\d+(?:[.,]\d+)?(?:\s*/\s*\d+(?:[.,]\d+)?)?'
+                      r'(?:\s*[a-zA-ZÀ-ỹ][a-zA-ZÀ-ỹ/%µ°]*)?|[↑↓]|\([-+–±]{1,3}\)')
+    BARE = re.compile(r'[<>≤≥]?\s*\d+(?:[.,]\d+)?(?:\s*/\s*\d+(?:[.,]\d+)?)?')
+    MAXW = 8
+    out, seen = [], set()
+
+    def add(s, e):
+        t = text[s:e]
+        st = len(t) - len(t.lstrip(' .;,:')); en = len(t) - len(t.rstrip(' .;,:'))
+        s, e = s + st, e - en
+        if e <= s or (s, e) in seen:
+            return
+        t = text[s:e]
+        if not t or len(t.split()) > MAXW:
+            return
+        seen.add((s, e)); out.append({'text': t, 'start': s, 'end': e})
+
+    for i, r in enumerate(regions):
+        seg, base = r['text'], r['start']
+        has_sig = bool(SIG.search(seg))
+
+        # (a) đoạn KHÔNG có số nhưng đoạn SAU có -> đây là ứng viên TÊN
+        #     ("WBC" trước "14.99 G/L", "PT - INR" trước "1.05")
+        if not has_sig:
+            nxt = regions[i + 1] if i + 1 < len(regions) else None
+            if nxt and SIG.search(nxt['text']):
+                add(base, base + len(seg))
+            continue
+
+        add(base, base + len(seg))                    # nguyên đoạn
+        m = SIG.search(seg)
+        if m.start() > 0:
+            add(base, base + m.start())               # phần TÊN (trước số)
+        # vài từ đầu: bắt tên ngắn lẫn trong câu ("lipase là tăng lên ở mức 623")
+        w = seg.split()
+        for n in (1, 2, 3):
+            if n < len(w):
+                pre = ' '.join(w[:n])
+                if not SIG.search(pre):
+                    add(base, base + len(pre))
+                # đuôi đoạn: tên đứng CUỐI, trước giá trị của đoạn sau
+                # ("...G/L NEUT%" rồi đoạn sau là "82.9 %")
+                suf = ' '.join(w[-n:])
+                if not SIG.search(suf):
+                    j = seg.rfind(suf)
+                    if j >= 0:
+                        add(base + j, base + j + len(suf))
+        # lõi giá trị, tách khỏi đuôi văn xuôi ("623" chứ không "623 (lần...)")
+        # BARE trước CORE: '1.0' phải có, vì CORE có thể nuốt nhầm chữ kế
+        # ("1.0 sau" — 'sau' trông như đơn vị với regex thuần).
+        for pat in (BARE, CORE):
+            for cm in pat.finditer(seg):
+                add(base + cm.start(), base + cm.end())
+    return out
 
 
 # --------------------------------------------------------------------------
