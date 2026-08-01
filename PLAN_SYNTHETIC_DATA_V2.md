@@ -139,7 +139,26 @@ TX|<xét nghiệm thường chỉ định> (2-3 mục)
 Dùng cách viết của bác sĩ Việt Nam, ngắn gọn. Không giải thích.
 ```
 
-**Chốt chặn ảo giác:** mọi chuỗi trả về **phải khớp KB** mới được dùng — `TH` khớp RxNorm hoặc danh sách nhóm chung; `TC`/`CD` khớp ICD hoặc kho surface form. Không khớp ⇒ **loại mục đó** (không loại cả ca). LLM bịa tên thuốc cũng vô hại vì chuỗi bịa không có trong KB.
+### ⚠️ SỬA GIẢ ĐỊNH: "trượt KB" KHÔNG có nghĩa là "sai"
+
+Bản trước viết *"mọi chuỗi phải khớp KB mới được dùng, không khớp thì loại"*. **Giả định đó SAI** — đo trên chính kết quả V2 (2.316 span): **243 span trượt KB**, nhưng soi tay thì phần lớn **ĐÚNG**, chỉ là KB không phủ:
+
+| Trượt KB nhưng ĐÚNG | Trượt KB và SAI thật |
+|---|---|
+| `thuốc giảm đau`, `kháng sinh`, `corticoid` (nhóm thuốc chung) | `thuốc` (từ trần) |
+| `cotrimoxazol`, `nhôm hydroxid`, `magie hydroxid` (chính tả Việt) | `điều trị triệu chứng`, `thuốc điều trị` |
+| `chụp x-quang ngực`, `nội soi`, `siêu âm`, `cấy máu`, `ercp` | `truyền dịch tĩnh mạch` (điều trị, không phải XN) |
+
+Nguyên nhân: RxNorm là từ điển Mỹ (không có nhóm thuốc chung tiếng Việt, không có chính tả Việt); `xetnghiem_ten.txt` là bảng giá viện phí (không có tên gọi tắt đời thường như `nội soi`, `siêu âm`).
+
+**Hệ quả — KHÔNG được dùng KB làm cổng loại bỏ.** Áp thẳng sẽ vứt mất `kháng sinh`, `siêu âm`, `nội soi` — toàn thứ đề thi dùng liên tục.
+
+**Cách đúng — KB cho ĐIỂM TIN CẬY, không làm cổng:**
+- Khớp KB → tin cao, dùng luôn
+- Trượt KB nhưng khớp **khuôn hợp lệ** (`thuốc + <tính từ>`, `chụp|siêu âm|nội soi + <bộ phận>`) → vẫn nhận
+- Trượt KB **và** không khớp khuôn nào → mới loại
+
+Chốt chặn ảo giác thực sự nằm ở chỗ khác: LLM **không gán nhãn**, và mọi span đều phải **neo được vào văn bản gốc**.
 
 ---
 
@@ -210,7 +229,31 @@ YÊU CẦU:
 
 ### 5.2. Neo nhãn — tìm chuỗi chính xác
 
-Mỗi cụm bắt buộc phải tìm thấy **đúng 1 lần**. Không thấy hoặc thấy nhiều lần ⇒ **sinh lại** (tối đa 3 lần). Không bao giờ "đoán gần đúng".
+**ĐÃ CHỌN PHƯƠNG ÁN B — cho phép lặp, gán MỌI lần xuất hiện.**
+
+Bản trước đòi mỗi cụm phải xuất hiện *đúng 1 lần*, lặp thì sinh lại. **Bỏ yêu cầu đó.** Đo thực tế: model nhắc lại triệu chứng ở phần bác sĩ trả lời là văn phong **tự nhiên** (`Bệnh dại` 4 lần, `sợ nước`/`đau đầu`/`mệt mỏi` 2 lần), và **chính đề thi cũng lặp** — cùng một triệu chứng xuất hiện ở cả "Lý do nhập viện" và "Triệu chứng khi nhập viện". Ép không lặp là bắt model viết ngược văn phong thật.
+
+```python
+import re
+def anchor_all(text, required):
+    """Gán nhãn MỌI lần xuất hiện. Khớp theo RANH GIỚI TỪ — không dùng `in`
+    thuần, vì `sốt` là chuỗi con của `sốt nhẹ`, `hạ sốt`, `sốt xuất huyết`."""
+    ents, seen = [], 0
+    for surface, etype in required:
+        pat = r'(?<![\wÀ-ỹ])' + re.escape(surface) + r'(?![\wÀ-ỹ])'
+        hits = list(re.finditer(pat, text, re.IGNORECASE))
+        if hits: seen += 1
+        for m in hits:
+            ents.append({'text': text[m.start():m.end()], 'type': etype,
+                         'position': [m.start(), m.end()]})
+    if seen / len(required) < 0.6:      # quá ít cụm -> mẫu loãng, sinh lại
+        return None
+    return resolve_overlap(ents)        # cụm ngắn nằm trong cụm dài -> giữ cụm dài
+```
+
+Hai chốt chặn đi kèm phương án B:
+1. **Khớp theo ranh giới từ**, không dùng `in` thuần — nếu không `sốt` sẽ ăn vào `sốt nhẹ`, `hạ sốt`.
+2. **Giải chồng lấn** — `đau đầu` nằm trong `đau đầu dữ dội` thì chỉ giữ cụm dài, không gán cả hai.
 
 ### 5.3. Quét từ điển ngược — chặn false negative
 
@@ -392,7 +435,7 @@ Trượt bất kỳ ⇒ loại mẫu, sinh lại.
 | 1 | `raw[start:end] == text` mọi thực thể | 100% | Lệch offset |
 | 2 | **Tỷ lệ từ nằm trong thực thể** | **8–18%** | Bệnh `data/dataset` (55.6%) |
 | 3 | Không có span chồng lấn | 0 | Nhãn mâu thuẫn |
-| 4 | Mọi cụm bắt buộc tìm thấy đúng 1 lần | 100% | LLM bỏ quên/sửa chữ |
+| 4 | Cụm bắt buộc tìm thấy **≥60%** số cụm; mỗi cụm gán **MỌI lần** xuất hiện | ≥60% | LLM bỏ quên. **KHÔNG đòi "đúng 1 lần"** — xem §5.2, phương án B |
 | 5 | Quét từ điển ngược: không còn cụm dương chưa gán | 0 sót | False negative |
 | 6 | **Không có chuỗi thuộc kho ÂM bị gán nhãn** | 0 | Ca âm bị gán nhầm |
 | 7 | Độ dài file 1.500–4.000 ký tự | — | Tài liệu quá ngắn |

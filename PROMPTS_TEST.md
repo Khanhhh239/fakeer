@@ -128,7 +128,7 @@ SAI:   2. [Nguyên nhân và cách mắc bệnh] — nói về nguyên nhân:
 Tiêu đề là một câu ngắn bình thường. Không dùng dấu ngoặc vuông.
 Không dùng dấu gạch ngang rồi mô tả lại. Không chép chữ trong hướng dẫn này.
 
-CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN, không sửa một chữ, mỗi cụm một lần:
+CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN trong bài, không sửa một chữ:
 - Bệnh dại
 - sợ nước
 - co thắt hầu họng
@@ -151,8 +151,10 @@ QUY TẮC:
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
 - Cấm chú thích tên bệnh bằng tiếng nước ngoài trong ngoặc.
   Viết "Bệnh dại", KHÔNG viết "Bệnh dại (rabies)" hay "Bệnh dại (狂犬病)".
-- Cấm từ tiếng Anh. Viết "chó cắn" không viết "dog bite".
-  Viết "vi rút dại" không viết "vi rút rabies".
+- Cấm MỌI từ tiếng Anh, kể cả tên khoa học của bệnh hay triệu chứng.
+  Viết "chó cắn" không viết "dog bite". Viết "vi rút dại" không viết "vi rút rabies".
+  Viết "sợ nước" không viết "sợ nước (hydrophobia)".
+  Nếu định viết tên tiếng Anh của bất kỳ bệnh hay triệu chứng nào, hãy BỎ nó đi.
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
 
 Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không ngoặc vuông.
@@ -176,12 +178,21 @@ Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Khôn
 Không cần đủ 15. Chỉ cần **gán nhãn đúng những cụm ĐÃ xuất hiện**. 10 nhãn đúng vẫn là 10 mẫu huấn luyện tốt.
 
 ```python
-found  = [e for e in required if text.count(e) == 1]
-missing = [e for e in required if e not in text]
-if len(found) / len(required) >= 0.6:      # >= 60% -> NHẬN
-    label(found)                            # chỉ gán cụm đã xuất hiện
-else:
-    reject_and_retry()                      # quá ít -> mẫu loãng, sinh lại
+import re
+def anchor_all(text, required):
+    """PHƯƠNG ÁN B: gán nhãn MỌI lần xuất hiện, không đòi "đúng 1 lần".
+    Khớp theo RANH GIỚI TỪ — `sốt` là chuỗi con của `sốt nhẹ`, `hạ sốt`."""
+    ents, seen = [], 0
+    for surface, etype in required:
+        pat = r'(?<![\wÀ-ỹ])' + re.escape(surface) + r'(?![\wÀ-ỹ])'
+        hits = list(re.finditer(pat, text, re.IGNORECASE))
+        if hits: seen += 1
+        for m in hits:
+            ents.append({'text': text[m.start():m.end()], 'type': etype,
+                         'position': [m.start(), m.end()]})
+    if seen / len(required) < 0.6:      # quá ít cụm -> mẫu loãng, sinh lại
+        return None
+    return resolve_overlap(ents)        # `đau đầu` nằm trong `đau đầu dữ dội` -> giữ cụm dài
 ```
 
 Ngưỡng 60%: vòng 2 đạt 10/15 = 67% → **nhận, không phải sinh lại**.
@@ -209,54 +220,78 @@ Model có thể tự thêm cụm ngoài danh sách (ví dụ nó viết `vết c
 
 ---
 
-# PROMPT 4 — Kho ÂM (ĐỔI CÁCH LÀM: neo vào văn bản thật)
+# PROMPT 4 — Kho ÂM: **BỎ LLM, lấy từ LỖI THẬT của model**
 
-**Vì sao đổi:** hỏi trừu tượng `"vật dụng không dùng để chữa bệnh"` thì `tắc kè hoa`, `điện thoại di động` đều đúng logic. Không thể sửa bằng cách viết chặt hơn — **bản thân câu hỏi sai**.
+## Vì sao bỏ cả ba cách trước
 
-**Cách đúng:** đưa một đoạn văn y tế THẬT, bảo nó chỉ ra cụm nào không phải thực thể. Output **kiểm chứng được** vì phải là chuỗi con của đoạn đã cho.
+| Cách đã thử | Kết quả | Vì sao hỏng |
+|---|---|---|
+| Hỏi LLM theo nhóm trừu tượng | `tắc kè hoa`, `điện thoại di động`, `gỗ sồi` | Định nghĩa nhóm quá rộng — model không sai, **đề bài của tôi sai** |
+| Đưa đoạn văn thật cho LLM chỉ ra | chỉ ra 2 mục | Chậm, sản lượng thấp, **không mở rộng được** — đúng như bạn nói |
+| Trừ KB khỏi n-gram văn bản thật | `bác`, `hỏi`, `nên`, `đây` | Ra toàn hư từ. Hard negative là tính chất **ngữ nghĩa**, không phải tần suất |
 
-```
-CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
+## Cách đúng: khai thác từ chính bài nộp
 
-Dưới đây là một đoạn trong bài tư vấn y tế. Hãy tìm các CỤM DANH TỪ trong đoạn
-này mà một máy tính dễ NHẦM là tên bệnh, tên thuốc hoặc tên xét nghiệm, nhưng
-thực chất KHÔNG PHẢI.
+Negative có giá trị nhất là cái **model ĐÃ gán sai thật**, không phải cái ta tưởng tượng ra. Ta có sẵn 2.316 span từ bài nộp V2 — đó là mỏ negative thật, và nó **tự mở rộng** theo mỗi lần chạy.
 
-ĐOẠN VĂN:
-"Trẻ thiếu men G6PD cần tránh tiếp xúc với băng phiến, long não đặt trong tủ
-quần áo và chăn màn. Không dùng thuốc nam, thuốc đông y khi chưa hỏi ý kiến
-bác sĩ. Mẹ đang cho con bú không nên dùng các chất chống chỉ định. Khi đi khám
-tại khoa nhi, luôn thông báo cho nhân viên y tế về tình trạng của trẻ. Trẻ vẫn
-ăn ngủ bình thường, đại tiện bình thường thì không cần lo lắng."
-
-YÊU CẦU:
-- Chỉ lấy cụm CÓ THẬT trong đoạn văn trên, chép nguyên văn.
-- Mỗi cụm một dòng riêng. Xuống dòng sau mỗi cụm.
-- Không đánh số, không giải thích, không thêm chữ nào khác.
-- Chỉ lấy cụm dễ bị nhầm là bệnh/thuốc/xét nghiệm.
-  Ví dụ trong đoạn trên: "băng phiến" dễ nhầm là thuốc vì nó là hoá chất.
-  Còn "tủ quần áo" thì không ai nhầm, đừng lấy.
-- Không lấy tên bệnh thật, tên thuốc thật, tên xét nghiệm thật.
-- Liệt kê xong thì DỪNG.
-
-Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh.
+```python
+# Span "đáng ngờ" = trượt KB VÀ không khớp khuôn hợp lệ nào
+OK_PATTERN = [
+    r'^(thuốc|kháng sinh|viên|dịch truyền)',                       # nhóm thuốc chung
+    r'^(chụp|siêu âm|nội soi|xét nghiệm|cấy|sinh thiết|chọc dò|đo|test)',
+]
+suspicious = [s for s in spans
+              if not in_kb(s) and not any(re.match(p, s.text.lower()) for p in OK_PATTERN)]
 ```
 
-**Kỳ vọng:** `băng phiến`, `long não`, `chăn màn`, `thuốc nam`, `thuốc đông y`, `khoa nhi`, `ăn ngủ bình thường`, `đại tiện bình thường`.
+Chạy trên bài nộp V2 ra **243 span trượt KB**, lọc tiếp bằng khuôn còn khoảng **40–60 ca đáng ngờ thật**. Duyệt tay 15 phút là xong, và **đó chính là những ca model đang sai**:
 
-**Kiểm tự động được:** mọi dòng output phải là chuỗi con của đoạn đã cho — không thoả thì loại. Đây là điều Prompt 4 cũ **không** làm được (không cách nào kiểm `tắc kè hoa` đúng hay sai).
+```
+thuốc                  ← từ trần, không phải tên thuốc
+điều trị triệu chứng   ← không phải tên thuốc
+thuốc điều trị         ← không phải tên thuốc
+truyền dịch tĩnh mạch  ← điều trị, không phải xét nghiệm
+truyền tĩnh mạch       ← nt
+dịch tiết              ← không phải xét nghiệm
+```
 
-**Chạy hàng loạt:** thay ĐOẠN VĂN bằng từng đoạn lấy từ 100 file `input/*.txt`. Vừa đúng phân bố thật, vừa kiểm chứng được, vừa không cần nghĩ ra nhóm nào cho đủ.
+Cộng với các ca đã biết từ vòng soi trước: `chăn màn`, `băng phiến`, `long não`, `men G6PD`, `tan huyết`, `khoa nội tổng hợp`.
+
+## Vì sao cách này giải được đúng phản biện của bạn
+
+| Phản biện | Cách này trả lời |
+|---|---|
+| "không kiếm ra text y khoa để làm vậy" | **Không cần text mới.** Dùng chính output model đã sinh trên 100 file có sẵn |
+| Không mở rộng được | **Tự mở rộng** — mỗi lần train xong, chạy lại, lỗi mới lại thành negative mới (vòng lặp hard negative mining chuẩn) |
+| Tốn công duyệt tay | Chỉ 40–60 ca/vòng, 15 phút. Và **duyệt lỗi thật có giá trị hơn nhiều** so với duyệt danh sách LLM bịa |
+
+## Số lượng cần — không nhiều như tưởng
+
+Negative dùng làm **distractor chèn vào text sinh ra**, không phải để liệt kê cho đủ:
+
+```
+300 negative × chèn 2–4 cái/tài liệu × 500 tài liệu  →  thừa sức phủ
+```
+
+Nên **~300 mục là đủ**, không cần hàng nghìn. Nguồn:
+
+| Nguồn | Số lượng | Công |
+|---|---|---|
+| Lỗi thật từ bài nộp V2 (mục trên) | ~50 | 15 phút duyệt |
+| Đã ghi nhận trong các vòng soi trước | ~20 | có sẵn |
+| 7 nhóm × ~15 mục, LLM sinh có few-shot **lấy từ 2 nguồn trên** | ~100 | 20 phút |
+| Sinh theo luật: `khoa X`, `phòng khám X` với X từ danh sách chuyên khoa | ~50 | code |
+| Bổ sung khi soi output các vòng sau | tăng dần | — |
+
+Điểm mấu chốt: LLM vẫn dùng được ở dòng 3, **nhưng few-shot phải là lỗi thật đã quan sát**, không phải ví dụ tôi bịa. Đó là khác biệt giữa vòng này và vòng trước.
 
 ---
 
-# Thứ tự test vòng 3
+# Thứ tự test vòng 4
 
-| # | Prompt | Xem gì |
+| # | Việc | Xem gì |
 |---|---|---|
-| 1 | Prompt 3 | Tiêu đề có còn `[...]` và `— nói về...` không · số cụm đạt (mục tiêu ≥8/13) |
-| 2 | Prompt 4 | Mọi dòng có nằm trong đoạn văn đã cho không · có xuống dòng không |
-| 3 | Prompt 1 — `"Bệnh dại"` | Đủ 11 dòng · không bịa thuốc · không từ meta |
-| 4 | Prompt 1 — `"Trứng cá"` | Còn lạc đề không |
-
-Nếu Prompt 3 vòng này vẫn lộ tiêu đề sai → chuyển sang cách cuối: **đưa nguyên một bài mẫu hoàn chỉnh về bệnh khác** làm few-shot, thay vì mô tả bố cục.
+| 1 | Prompt 3 (đã bỏ ngoặc vuông) | Tiêu đề sạch chưa · còn lọt `rabies`/`hydrophobia` không |
+| 2 | Prompt 1 — `"Bệnh dại"` | Đủ 11 dòng · không bịa thuốc · không từ meta |
+| 3 | Prompt 1 — `"Trứng cá"` | Còn lạc đề không |
+| 4 | — | **Bỏ Prompt 4**, chuyển sang khai thác lỗi thật (mục trên) |
