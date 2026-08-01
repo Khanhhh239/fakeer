@@ -11,6 +11,7 @@ Mọi file đều là CSV UTF-8, có dòng tiêu đề.
 | `icd10_en.csv` | 71.704 | 71.704 | `code,term` | **tuỳ chọn**, bí danh tiếng Anh |
 | `rxnorm_merged.csv` | 129.690 | **83.320 RxCUI** | `code,term` | từ điển thuốc |
 | `inn_usan.csv` | 36 | 36 | `form,usan` | cầu nối INN↔USAN |
+| `xetnghiem_ten.txt` | 598 | 598 tên duy nhất | 1 tên/dòng | kho surface form `TÊN_XÉT_NGHIỆM` cho sinh data |
 
 ## Từng file
 
@@ -57,6 +58,23 @@ adrenaline,epinephrine
 36 cặp đã kiểm chứng thủ công. Cần vì RxNorm dùng **USAN** (tên Mỹ) còn tài liệu Việt Nam
 thường dùng **INN/BAN** (tên quốc tế): `paracetamol` ↔ `acetaminophen`, `adrenaline` ↔ `epinephrine`.
 Không có bảng này thì tra `paracetamol` trong RxNorm sẽ trượt.
+
+### `xetnghiem_ten.txt` — kho tên xét nghiệm/thủ thuật
+
+598 tên duy nhất, **trích tự động** từ một bảng giá viện phí (nguồn ngoài, KHÔNG chép file gốc
+vào repo — chỉ giữ danh sách tên đã trích xuất).
+
+**KHÔNG có KB chuẩn cho tên xét nghiệm** ở Việt Nam trong tầm với dự án — không có LOINC, ICD
+chương Z chỉ là "khám sức khoẻ" chứ không liệt kê xét nghiệm. Nên phải trích từ bảng giá thật.
+
+Bảng gốc bị "làm phẳng" khi copy (mỗi ô một dòng, dòng trống ngăn ô). Mỗi bản ghi có dạng
+`[mã 1] [mã 2] [mã lab, có thể thiếu] [TÊN] [giá 1] [giá 2] [ghi chú, có thể thừa]`. Không tách
+được bằng regex hình dạng chuỗi đơn thuần — thử lần đầu dùng "chuỗi ngắn/hoa/không dấu cách" để
+nhận diện mã lab đã **nhầm chính tên xét nghiệm** (`ACTH`, `ADH`, `ALA`, `CEA` — đều viết tắt hoa,
+trông giống hệt mã nội bộ như `DƯ-MDLS`). Sửa bằng **nhìn trước 1 token**: nếu text hiện tại đứng
+trước một text khác (không phải giá) thì nó là mã, đứng trước giá thì nó là tên — dựa vào VỊ TRÍ
+trong cấu trúc bảng, không dựa vào hình dạng chữ. Trích được 598/~610 bản ghi (13 ca lệch cấu
+trúc bị gắn cờ bỏ qua, không bị âm thầm nuốt).
 
 ## File CỐ Ý không chép sang
 

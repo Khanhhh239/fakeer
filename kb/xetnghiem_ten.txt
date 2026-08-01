@@ -1,0 +1,599 @@
+ANA 17 profile test (sàng lọc và định danh đồng thời 17 loại kháng thể kháng nhân bằng thanh sắc ký miễn dịch)
+Bilan đông cầm máu - huyết khối
+Chụp ảnh màu tế bào qua kính hiển vi
+Co cục máu đông
+Công thức nhiễm sắc thể (Karyotype)
+Công thức nhiễm sắc thể (NST) từ tế bào ối
+Đàn hồi co cục máu (TEG: ThromboElastoGraph)
+Đánh giá tỷ lệ sống của tế bào bằng kỹ thuật nhuộm xanh trypan
+DCIP test (Dichlorophenol- Indolphenol- test dùng sàng lọc huyết sắc tố E)
+Đếm số lượng CD3 hoặc CD4 hoặc CD8
+Điện di có tính thành phần huyết sắc tố (định tính)
+Điện di huyết sắc tố (định lượng)
+Điện di miễn dịch huyết thanh
+Điện di protein huyết thanh
+Điều chế và lưu trữ tế bào gốc từ máu cuống rốn hoặc từ tủy xương
+Điều chế và lưu trữ tế bào gốc từ máu ngoại vi
+Định danh kháng thể Anti- HLA bằng kỹ thuật luminex
+Định danh kháng thể bất thường
+Định danh kháng thể kháng HLA bằng kỹ thuật ELISA
+Định lượng anti Thrombin III
+Định lượng CD25 (IL-2R) hòa tan trong huyết thanh
+Định lượng chất ức chế C1
+Định lượng D - Dimer bằng kỹ thuật miễn dịch hoá phát quang
+Định lượng D- Dimer
+Định lượng đồng yếu tố Ristocetin
+Định lượng FDP
+Định lượng Fibrinogen (Yếu tố I) bằng phương pháp trực tiếp
+Định lượng gen bệnh máu ác tính
+Định lượng men G6PD
+Định lượng men Pyruvat kinase
+Định lượng Plasminogen
+Định lượng Protein C
+Định lượng Protein S
+Định lượng t- PA
+Định lượng tế bào người cho ở người nhận sau ghép tế bào gốc tạo máu
+Định lượng ức chế yếu tố IX
+Định lượng ức chế yếu tố VIII
+Định lượng yếu tố Heparin
+Định lượng yếu tố I (fibrinogen)
+Định lượng yếu tố II hoặc XII hoặc VonWillebrand (kháng nguyên) hoặc VonWillebrand (hoạt tính)
+Định lượng yếu tố kháng Xa
+Định lượng yếu tố Thrombomodulin
+Định lượng yếu tố V hoặc yếu tố VII hoặc yếu tố X (Định lượng hoạt tính yếu tố V/yếu tố Vll/yếu tố X) (Định lượng yếu tố V; yếu tố VII, yếu tố X, yếu tố XI)
+Định lượng yếu tố VIII/yếu tố IX; định lượng hoạt tính yếu tố IX
+Định lượng yếu tố VIIIc hoặc yếu tố XI (yếu tố VIII hoặc yếu tố XI; Định lượng hoạt tính yếu tố VIII hoặc yếu tố XI
+Định lượng yếu tố XIII (hoặc yếu tố ổn định sợi huyết)
+Định lượng yếu tố: PAI- l/PAI-2
+Định lượng α2 anti -plasmin (α2 AP)
+Định lượng β Thromboglobulin (βTG)
+Định nhóm máu A1
+Định nhóm máu hệ ABO bằng giấy định nhóm máu để truyền máu toàn phần: khối hồng cầu, khối bạch cầu
+Định nhóm máu hệ ABO bằng giấy định nhóm máu để truyền: chế phẩm tiểu cầu hoặc huyết tương
+Định nhóm máu hệ ABO bằng phương pháp ống nghiệm; trên phiến đá hoặc trên giấy
+Định nhóm máu hệ ABO bằng thẻ định nhóm máu
+Định nhóm máu hệ ABO trên thẻ định nhóm máu (đã có sẵn huyết thanh mẫu) để truyền chế phẩm tiểu cầu hoặc huyết tương
+Định nhóm máu hệ ABO trên thẻ định nhóm máu (đã có sẵn huyết thanh mẫu) để truyền máu toàn phần, khối hồng cầu, bạch cầu
+Định nhóm máu hệ ABO, Rh(D) trên máy tự động
+Định nhóm máu hệ ABO, Rh(D) bằng công nghệ hồng cầu gắn từ
+Định nhóm máu hệ ABO, Rh(D) bằng phương pháp gelcard/Scangel
+Định nhóm máu hệ Diego (xác định kháng nguyên Diego)
+Định nhóm máu hệ MNSs (xác định kháng nguyên Mia)
+Định nhóm máu hệ P (xác định kháng nguyên P1)
+Định nhóm máu hệ Rh (D yếu , D từng phần)
+Định nhóm máu hệ Rh(D) bằng phương pháp ống nghiệm, phiến đá
+Định nhóm máu khó hệ ABO
+Định tính ức chế yếu tố VIIIc/IX
+Định type HLA cho 1 locus (Locus A, hoặc Locus B, hoặc Locus C, hoặc Locus DR, hoặc Locus DQ) bằng kỹ thuật PCR-SSP
+Định type HLA độ phân giải cao cho 1 locus (A, B, C, DR, DQ, DP) bằng kỹ thuật PCR-SSO
+Đo độ đàn hồi cục máu (ROTEM: Rotation ThromboElastoMetry) ức chế tiểu cầu (ROTEM- FIBTEM)/ ức chế tiêu sợi huyết (ROTEM-APTEM)/ trung hòa heparin (ROTEM- HEPTEM)
+Đo độ đàn hồi cục máu (ROTEM: Rotation ThromboElastoMetry) nội sinh (ROTEM-INTEM)/ ngoại sinh (ROTEM- EXTEM)
+Đo độ ngưng tập tiểu cầu với ADP/Collgen
+Đo độ ngưng tập tiểu cầu với Ristocetin/ Epinephrin/ ArachidonicAcide/ thrombin
+Đo độ nhớt (độ quánh) máu toàn phần/huyết tương/ dịch khác (tính cho một loại)
+Giải trình tự gen bằng phương pháp NGS (giá tính cho 01 gen)
+Giải trình tự gen bằng phương pháp Sanger (giá tính cho 01 gen)
+Hemoglobin Định lượng (bằng máy quang kế)
+Hiệu giá kháng thể miễn dịch (Kỹ thuật Scangel/Gelcard trên máy bán tự động/tự động)
+Hiệu giá kháng thể tự nhiên chống A, B/ Hiệu giá kháng thể bất thường 30-50)
+Hoá mô miễn dịch tủy xương (01 marker)
+Hồng cầu lưới (bằng phương pháp thủ công)
+Huyết đồ (bằng phương pháp thủ công)
+Huyết đồ (sử dụng máy đếm tự động)
+Huyết đồ bằng hệ thống tự động hoàn toàn (có nhuộm lam)
+Lách đồ
+Lọc bạch cầu trong khối hồng cầu
+Lympho cross match bằng kỹ thuật Flow-cytometry
+Máu lắng (bằng máy tự động)
+Máu lắng (bằng phương pháp thủ công)
+Nghiệm pháp Coombs gián tiếp (phương pháp hồng cầu gắn từ trên máy bán tự động)
+Nghiệm pháp Coombs gián tiếp hoặc trực tiếp (bằng một trong các phương pháp: ống nghiệm, Gelcard/ Scangel);
+Nghiệm pháp Coombs trực tiếp (phương pháp hồng cầu gắn từ trên máy bán tự động)
+Nghiệm pháp rượu (nghiệm pháp Ethanol)
+Nghiệm pháp sinh Thromboplastin (T.G.T: Thromboplastin Generation Test)
+Nghiệm pháp von-Kaulla
+Nhuộm Esterase không đặc hiệu
+Nhuộm Esterase không đặc hiệu có ức chế Naf
+Nhuộm hồng cầu lưới trên máy tự động
+Nhuộm hồng cầu sắt (Nhuộm Perls)
+Nhuộm Periodic Acide Schiff (PAS)
+Nhuộm Peroxydase (MPO)
+Nhuộm Phosphatase acid
+Nhuộm Phosphatase kiềm bạch cầu
+Nhuộm sợi xơ liên võng trong mô tủy xương
+Nhuộm sợi xơ trong mô tủy xương
+Nhuộm sudan den
+Nuôi cấy cụm tế bào gốc (colony forming culture)
+OF test (test sàng lọc Thalassemia)
+Phân tích dấu ấn/CD/marker miễn dịch máu ngoại vi, hoặc dịch khác bằng kỹ thuật flow cytometry (cho 1 dấu ấn/CD/marker)
+Phân tích dấu ấn/CD/marker miễn dịch mẫu tủy xương, hoặc mẫu hạch, hoặc mẫu tổ chức khác bằng kỹ thuật flow cytometry (cho 1 dấu ấn/CD/marker)
+Phản ứng hòa hợp có sử dụng kháng globulin người (Kỹ thuật ống nghiệm)
+Phản ứng hòa hợp có sử dụng kháng globulin người (Kỹ thuật Scangel/ Gelcard trên máy bán tự động/ tự động)
+Phản ứng hòa hợp tiểu cầu (Kỹ thuật pha rắn)
+Phản ứng hòa hợp trong môi trường nước muối ở 22°C (Kỹ thuật Scangel/ Gelcard trên máy bán tự động/ tự động)
+Phản ứng hòa hợp trong môi trường nước muối ở 22°C (kỹ thuật ống nghiệm)
+Phát hiện chất ức chế đường đông máu nội sinh không phụ thuộc thời gian và nhiệt độ
+Phát hiện chất ức chế đường đông máu nội sinh phụ thuộc thời gian và nhiệt độ
+Phát hiện đảo đoạn intron22 của gen yếu tố VIII bệnh Hemophilia bằng kỹ thuật longrange PCR
+Phát hiện gen bệnh Thalassemia bằng kỹ thuật PCR-RFLP
+Phát hiện kháng đông đường chung
+Phát hiện kháng đông lupus (LAC/ LA screen: Lupus Anticoagulant screen)
+Phát hiện kháng thể kháng tiểu cầu bằng kỹ thuật Flow-cytometry
+Rửa hồng cầu/tiểu cầu bằng máy ly tâm lạnh
+Sàng lọc kháng thể bất thường (kỹ thuật ống nghiệm)
+Sàng lọc kháng thể bất thường (Kỹ thuật Scangel/ Gelcard trên máy bán tự động/ tự động)
+Sức bền thẩm thấu hồng cầu
+Gạn tế bào máu/ huyết tương điều trị
+Tập trung bạch cầu
+Test đường + Ham
+Thể tích khối hồng cầu (Hematocrit)
+Thời gian Howell
+Thời gian máu chảy (phương pháp Ivy)
+Thời gian máu chảy/(phương pháp Duke)
+Thời gian máu đông
+Thời gian Prothombin (PT%, PTs, INR)
+Thời gian Prothrombin (PT,TQ) bằng thủ công
+Thời gian Prothrombin (PT,TQ) bằng máy bán tự động, tự động
+Thời gian thrombin (TT)
+Thời gian thromboplastin hoạt hóa từng phần (APTT)
+Thu thập và chiết tách tế bào gốc từ máu cuống rốn
+Thu thập và chiết tách tế bào gốc từ máu ngoại vi
+Thu thập và chiết tách tế bào gốc từ tủy xương
+Tinh dịch đồ
+Tìm ấu trùng giun chỉ trong máu
+Tìm hồng cầu có chấm ưa base (bằng máy)
+Tìm ký sinh trùng sốt rét trong máu bằng phương pháp thủ công
+Tìm mảnh vỡ hồng cầu (bằng máy)
+Tìm tế bào Hargraves
+Tìm yếu tố kháng đông đường ngoại sinh
+Tìm yếu tố kháng đông đường nội sinh
+Tổng phân tích tế bào máu ngoại vi (bằng hệ thống tự động hoàn toàn)
+Tổng phân tích tế bào máu ngoại vi (bằng phương pháp thủ công)
+Tổng phân tích tế bào máu ngoại vi bằng máy đếm laser
+Tổng phân tích tế bào máu ngoại vi bằng máy đếm tự động
+Xác định bản chất kháng thể đặc hiệu (IgG, IgA, IgM, C3d, C3c) (phương pháp gelcard/ scangel khi nghiệm pháp Coombs trực tiếp/ gián tiếp dương tính)
+Xác định bất đồng nhóm máu mẹ con
+Xác định gen bằng kỹ thuật FISH
+Xác định gen bệnh máu ác tính bằng RT-PCR
+Xác định gen bệnh máu bằng kỹ thuật cIg FISH (giá tính cho 1 gen)
+Xác định kháng nguyên c của hệ của nhóm máu Rh (Kỹ thuật Scangel/ Gelcard trên máy tự động)
+Xác định kháng nguyên C của hệ nhóm máu Rh (Kỹ thuật ống nghiệm)
+Xác định kháng nguyên c của hệ nhóm máu Rh (Kỹ thuật ống nghiệm)
+Xác định kháng nguyên C của hệ nhóm máu Rh (Kỹ thuật Scangel/Gelcard trên máy tự động)
+Xác định kháng nguyên E của hệ nhóm máu Rh (Kỹ thuật ống nghiệm)
+Xác định kháng nguyên e của hệ nhóm máu Rh (Kỹ thuật ống nghiệm)
+Xác định kháng nguyên E của hệ nhóm máu Rh (Kỹ thuật Scangel/Gelcard trên máy tự động)
+Xác định kháng nguyên e của hệ nhóm máu Rh (Kỹ thuật Scangel/ Gelcard trên máy tự động)
+Xác định kháng nguyên Fya của hệ nhóm máu Duffy (Kỹ thuật Scangel/ Gelcard trên máy tự động)
+Xác định kháng nguyên Fyb của hệ nhóm máu Duffy (Kỹ thuật Scangel/ Gelcard trên máy tự động)
+Xác định kháng nguyên H
+Xác định kháng nguyên Jka của hệ nhóm máu Kidd
+Xác định kháng nguyên Jkb của hệ nhóm máu Kidd
+Xác định kháng nguyên k của hệ nhóm máu Kell
+Xác định kháng nguyên K của hệ nhóm máu Kell
+Xác định kháng nguyên Lea của hệ nhóm máu Lewis
+Xác định kháng nguyên Leb của hệ, nhóm máu Lewis
+Xác định kháng nguyên Lua của hệ nhóm máu Lutheran
+Xác định kháng nguyên Lub của hệ nhóm máu Lutheran
+Xác định kháng nguyên M của hệ nhóm máu MNS
+Xác định kháng nguyên N của hệ nhóm máu MNS
+Xác định kháng nguyên nhóm máu hệ hồng cầu bằng phương pháp sinh học phân tử (giá cho một loại kháng nguyên)
+Xác định kháng nguyên S của hệ nhóm máu MNS
+Xét nghiệm CD55/59 bạch cầu (chẩn đoán bệnh Đái huyết sắc tố) niệu kịch phát ban đêm)
+Xét nghiệm CD55/59 hồng cầu (chẩn đoán bệnh Đái huyết sắc tố) niệu kịch phát ban đêm)
+Xét nghiệm chuyển dạng lympho với PHA
+Xét nghiệm độ chéo (Cross-Match) trong ghép cơ quan
+Xét nghiệm HIT (Heparin Induced Thrombocytopenia) - Ab)
+Xét nghiệm HIT (Heparin Induced Thrombocytopenia)- IgG)
+Xét nghiệm HLA-B27 bằng kỹ thuật Flow-cytometry
+Xét nghiệm lựa chọn đơn vị máu phù hợp (10 đơn vị máu trong 3 điều kiện 22°C, 37°C, kháng globulin người) bằng phương pháp Scangel/Gelcard
+Xét nghiệm mô bệnh học tủy xương
+Xét nghiệm PFA (Platelet Funtion Analyzer) bằng Collagen/ADP trên máy tự động (Tên khác: PFA bằng Col/ADP)
+Xét nghiệm PFA (Platelet Funtion Analyzer) bằng Collagen/Epinephrine trên máy tự động (Tên khác: PFA bằng Col/Epi)
+Xét nghiệm số lượng tiểu cầu (thủ công)
+Xét nghiệm tế bào gốc CD 34+
+Xét nghiệm tế bào hạch
+Xét nghiệm tế bào học tủy xương
+Xét nghiệm trao đổi nhiễm sắc thể chị em
+Xét nghiệm và chẩn đoán hóa mô miễn dịch tủy xương cho một dấu ấn (marker) trên máy nhuộm tự động.
+Xét nghiệm và chẩn đoán mô bệnh học tủy xương trên máy nhuộm tự động.
+Xét nghiệm xác định đột biến thalassemia (phát hiện đồng thời 21 đột biến alpha-thalassemia hoặc 22 đột biến β-thalasemia)
+Xét nghiệm xác định gen Hemophilia
+Định lượng ELISA chẩn đoán dị ứng thuốc (Đối với 1 loại thuốc)
+Định lượng ERYTHROPOIETIN (EPO)
+Định lượng Histamine
+Định lượng IgE đặc hiệu với 1 loại dị nguyên
+Định lượng Interleukin
+Định lượng kháng thể C1INH/ kháng thể GBM ab/ Tryptase
+Định lượng kháng thể IgG1/IgG2/IgG3/IgG4
+Định lượng kháng thể kháng C5a
+Định lượng kháng thể kháng C1q
+Định lượng kháng thể kháng C3a/C3bi/C3d/C4a
+Định lượng kháng thể kháng CCP
+Định lượng kháng thể kháng Centromere
+Định lượng kháng thể kháng ENA
+Định lượng kháng thể kháng Histone
+Định lượng kháng thể kháng Insulin
+Định lượng kháng thể kháng Jo - 1
+Định lượng kháng thể kháng nhân và kháng thể kháng chuỗi kép (ANA&DsDNA)
+Định lượng kháng thể kháng DNA chuỗi kép (Anti dsDNA) bằng máy tự động/bán tự động
+Định lượng kháng thể kháng DNA chuỗi kép (Anti dsDNA) test nhanh
+Định lượng kháng thể kháng nhân (ANA) bằng máy tự động/bán tự động
+Định lượng kháng thể kháng nhân (ANA) test nhanh
+Định lượng kháng thể kháng Phospholipid (IgG/IgM)/ Cardiolipin (IgG/IgM)/ Beta2-Glycoprotein (IgG/IgM)
+Định lượng kháng thể kháng Prothrombin
+Định lượng kháng thể kháng RNP-70
+Định lượng kháng thể kháng Scl-70
+Định lượng kháng thể kháng Sm
+Định lượng kháng thể kháng SSA(Ro)/SSB(La)/SSA-p200
+Định lượng kháng thể kháng tiểu cầu
+Định lượng kháng thể kháng tinh trùng
+Định lượng kháng thể kháng tương bào bạch cầu đa nhân trung tính (ANCA)
+Định lượng kháng thể kháng ty lạp thể (AMA-M2) /kháng thể kháng tương bào gan typel (LC1) / kháng thể kháng tiểu vi thể gan thận type 1 (LKM1) / kháng thể kháng thụ thể GLYCOPROTEIN trên màng tế bào gan người châu Á (ASGPR)
+Định lượng MPO (pANCA)/PR3 (cANCA)
+Khẳng định kháng đông lupus (LAC/ LA confirm: Lupus Anticoagulant confirm)
+ACTH
+ADH
+ALA
+Alpha FP (AFP)
+Alpha Microglobulin
+Amoniac
+Anti - TG
+Anti - TPO (Anti- thyroid Peroxidase antibodies) định lượng
+Apolipoprotein A/B (1 loại)
+Benzodiazepam (BZD)
+Beta - HCG
+Beta2 Microglobulin
+BNP (B - Type Natriuretic Peptide)
+Bổ thể trong huyết thanh
+CA 125
+CA 15 - 3
+CA 19-9
+CA 72 -4
+Ca++ máu
+Calci
+Calcitonin
+Catecholamin
+CEA
+Ceruloplasmin
+CK-MB
+Complement 3 (C3)/4 (C4) (1 loại)
+Cortison
+C-Peptid
+CPK
+CRP định lượng
+CRP hs
+Cyclosporine
+Cyfra 21 - 1
+Điện giải đồ (Na, K, CL)
+Digoxin
+Định lượng 25OH Vitamin D (D3)
+Định lượng Alphal Antitrypsin
+Định lượng Anti CCP
+Định lượng Beta Crosslap
+Định lượng Bilirubin toàn phần hoặc trực tiếp; các enzym: phosphataze kiềm hoặc GOT hoặc GPT...
+Định lượng các chất Albumine; Creatine; Globuline; Glucose; Phospho, Protein toàn phần, Ure, Axit Uric, Amylase,...
+Định lượng Cystatine C
+Định lượng Ethanol (cồn)
+Định lượng Free Kappa niệu/huyết thanh
+Định lượng Free Lambda niệu/huyết thanh
+Định lượng Gentamicin
+Định lượng Methotrexat
+Định lượng p2PSA
+Định lượng sắt chưa bão hòa huyết thanh
+Định lượng sắt huyết thanh hoặc Mg ++ huyết thanh
+Định lượng Tobramycin
+Định lượng Tranferin Receptor
+Định lượng Tryglyceride hoặc Phospholipid hoặc Lipid toàn phần hoặc Cholesterol toàn phần hoặc HDL-Cholesterol hoặc LDL - Cholesterol
+Đo hoạt độ Cholinesterase (ChE)
+Đo hoạt độ P-Amylase
+Đo khả năng gắn sắt toàn thể
+Đường máu mao mạch
+E3 không liên hợp (Unconjugated Estriol)
+Erythropoietin
+Estradiol
+Ferritin
+Folate
+Free bHCG (Free Beta Human Chorionic Gonadotropin)
+FSH
+Gama GT
+GH
+GLDH
+Gross
+Haptoglobin
+HbA1C
+HBDH
+HE4
+Homocysteine
+IgA/IgG/IgM/IgE (1 loại)
+Inhibin A
+Insuline
+Kappa định tính
+Khí máu
+Lactat
+Lambda định tính
+LDH
+LH
+Lipase
+Maclagan
+Myoglobin
+Ngộ độc thuốc
+Nồng độ rượu trong máu
+NSE (Neuron Specific Enolase)
+Paracetamol
+Phản ứng cố định bổ thể
+Phản ứng CRP
+Phenytoin
+PLGF
+Pre albumin
+Pro-BNP (N-terminal pro B-type natriuretic peptid)
+Pro-calcitonin
+Progesteron
+PRO-GRP
+Prolactin
+PSA
+PSA tự do (Free prostate- Specific Antigen)
+PTH
+Quinin/ Cloroquin/ Mefloquin
+RF (Rheumatoid Factor)
+Salicylate
+SCC
+SFLT1
+T3/FT3/T4/FT4 (1 loại)
+Tacrolimus
+Testosteron
+Theophylin
+Thyroglobulin
+TRAb định lượng
+Transferin/độ bão hòa tranferin
+Tricyclic anti depressant
+Troponin T/I
+TSH
+Vitamin B12
+Xác định Bacturate trong máu
+Xác định các yếu tố vi lượng (đồng, kẽm...)
+Xác định các yếu tố vi lượng Fe (sắt)
+Amphetamin (định tính)
+Amylase niệu
+Calci niệu
+Catecholamin niệu (HPLC)
+Điện di Protein nước tiểu (máy tự động)
+Điện giải đồ (Na, K, Cl) niệu
+DPD
+Dưỡng chấp
+Gonadotrophin để chẩn đoán thai nghén bằng phương pháp hóa học-miễn dịch định tính
+Gonadotrophin để chẩn đoán thai nghén định lượng
+Hydrocorticosteroid định lượng
+Marijuana định tính
+Micro Albumin
+Oestrogen toàn phần định lượng
+Opiate định tính
+Phospho niệu
+Porphyrin định tính
+Protein Bence - Jone
+Protein niệu hoặc đường niệu định lượng
+Tế bào cặn nước tiểu hoặc cặn Adis
+Tế bào/trụ hay các tinh thể khác định tính
+Tổng phân tích nước tiểu
+Tỷ trọng trong nước tiểu/ pH định tính
+Ure hoặc Axit Uric hoặc Creatinin niệu
+Xentonic/ sắc tố mật/ muối mật/ urobilinogen
+Amilase/ Trypsin/ Mucinase định tính
+Bilirubin định tính
+Canxi, Phospho định tính
+Urobilin, Urobilinogen: Định tính
+Clo dịch
+Glucose dịch
+Phản ứng Pandy
+Protein dịch
+Rivalta
+Xét nghiệm tế bào trong nước dịch chẩn đoán tế bào học (não tủy, màng tim, màng phổi, màng bụng, dịch khớp, rửa phế quản..
+Xét nghiệm tế bào trong nước dịch chẩn đoán tế bào học (não tủy, màng tim, màng phổi, màng bụng, dịch khớp, rửa phế quản...) có đếm số lượng tế bào
+AFB trực tiếp nhuộm huỳnh quang
+Anti HAV-IgM bằng miễn dịch bán tự động/tự động
+Anti HAV-total bằng miễn dịch bán tự động/tự động
+Anti-HBc IgM miễn dịch bán tự động/tự động
+Anti-HBe miễn dịch bán tự động/tự động
+Anti-HIV (nhanh)
+Anti-HIV bằng miễn dịch bán tự động/tự động
+Anti-HBc IgG miễn dịch bán tự động/tự động
+Anti-HBs định lượng
+Anti-HBs miễn dịch bán tự động/tự động
+Anti-HCV (nhanh)
+Anti-HCV miễn dịch bán tự động/tự động
+ASLO
+Aspergillus miễn dịch bán tự động/tự động
+BK/JC virus Real-time PCR
+Chlamydia IgG miễn dịch bán tự động/tự động
+Chlamydia test nhanh
+Clostridium difficile miễn dịch tự động
+CMV Avidity
+CMV đo tải lượng hệ thống tự động
+CMV IgG miễn dịch bán tự động/tự động
+CMV IgM miễn dịch bán tự động/tự động
+CMV Real-time PCR
+Cryptococcus test nhanh
+Dengue IgG miễn dịch bán tự động/tự động
+Dengue IgM miễn dịch bán tự động/tự động
+Dengue NS1Ag/IgM-IgG test nhanh
+EBV EA-D IgG miễn dịch bán tự động/tự động
+EBV EB-NA1 IgG miễn dịch bán tự động/tự động
+EBV-VCA IgG miễn dịch bán tự động/tự động
+EBV-VCA IgM miễn dịch bán tự động/tự động
+Giun chỉ ấu trùng trong máu nhuộm soi
+HBeAb test nhanh
+HBeAg miễn dịch bán tự động/tự động
+HBeAg test nhanh
+HBsAg (nhanh)
+HBsAg Định lượng
+HBsAg khẳng định
+HBsAg miễn dịch bán tự động/ tự động
+HBV đo tải lượng hệ thống tự động
+HBV đo tải lượng Real-time PCR
+HCV Core Ag miễn dịch tự động
+HCV đo tải lượng hệ thống tự động
+HCV đo tải lượng Real-time PCR
+HDV Ag miễn dịch bán tự động
+HDV IgG miễn dịch bán tự động/ tự động
+HDV IgM miễn dịch bán tự động/ tự động
+Helicobacter pylori Ag test nhanh
+HEV IgG miễn dịch bán tự động/tự động
+HEV IgM miễn dịch bán tự động/tự động
+HIV Ag/Ab miễn dịch bán tự động/ tự động
+HIV đo tải lượng hệ thống tự động
+HIV khẳng định
+Hồng cầu trong phân test nhanh
+Hồng cầu, bạch cầu trong phân soi trực tiếp
+HPV genotype PCR hệ thống tự động
+HPVReal-time PCR
+HSV1+2 IgG miễn dịch bán tự động/ tự động
+HSV1+2 IgM miễn dịch bán tự động/ tự động
+Influenza virus A, B Real-time PCR
+Influenza virus A, B test nhanh
+JEV IgM (test nhanh)
+JEV IgM miễn dịch bán tự động/tự động
+Ký sinh trùng/ Vi nấm soi
+Leptospira test nhanh
+Measles virus IgG miễn dịch bán tự động/ tự động
+Measles virus IgM miễn dịch bán tự động/ tự động
+Mycobacterium tuberculosis kháng thuốc hàng 1 môi trường lỏng
+Mycobacterium tuberculosis kháng thuốc hàng 2 môi trường đặc
+Mycobacterium tuberculosis kháng thuốc PZA môi trường lỏng
+Mycobacterium tuberculosis đa kháng LPA
+Mycobacterium tuberculosis định danh và kháng RMP Xpert
+Mycobacterium tuberculosis kháng thuốc hàng 1 môi trường đặc
+Mycobacterium tuberculosis nuôi cấy môi trường đặc
+Mycobacterium tuberculosis nuôi cấy môi trường lỏng
+Mycobacterium tuberculosis PCR hệ thống tự động
+Mycobacterium tuberculosis Real-time PCR
+Mycobacterium tuberculosis siêu kháng LPA
+Mycoplasma pneumoniae IgG miễn dịch bán tự động
+Mycoplasma pneumoniae IgM miễn dịch bán tự động
+NTM định danh LPA
+Nuôi cấy tìm vi khuẩn kỵ khí/vi hiếu khí
+Phản ứng Mantoux
+Plasmodium (ký sinh trùng sốt rét) trong máu nhuộm soi
+Pneumocystis miễn dịch bán tự động/ tự động
+Rickettsia Ab
+Rotavirus Ag test nhanh
+RSV (Respiratory Syncytial Virus) miễn dịch bán tự động/ tự động
+Rubella IgG miễn dịch bán tự động/ tự động
+Rubella IgM miễn dịch bán tự động/ tự động
+Rubella virus Ab test nhanh
+Rubella virus Avidity
+Salmonella Widal
+Toxoplasma Avidity
+Toxoplasma IgG miễn dịch bán tự động/ tự động
+Toxoplasma IgM miễn dịch bán tự động/ tự động
+Treponema pallidum RPR định lượng
+Treponema pallidum RPR định tính
+Treponema pallidum TPHA định lượng
+Treponema pallidum TPHA định tính
+Trứng giun sán, đơn bào phương pháp trực tiếp
+Vi hệ đường ruột
+Vi khuẩn khẳng định
+Vi khuẩn nhuộm soi
+Vi khuẩn nuôi cấy định danh phương pháp thông thường
+Vi khuẩn nuôi cấy và định danh hệ thống tự động
+Vi khuẩn/ virus/ vi nấm/ ký sinh trùng (IgG, IgM) miễn dịch bán tự động/miễn dịch tự động
+Vi khuẩn/ virus/ vi nấm/ ký sinh trùng genotype Real-time PCR (cho 1 vi sinh vật)
+Vi khuẩn/ virus/ vi nấm/ ký sinh trùng Real-time PCR
+Vi khuẩn/ virus/ vi nấm/ ký sinh trùng test nhanh
+Vi khuẩn/ virus/ vi nấm/ ký sinh trùng xác định trình tự một đoạn gene
+Vi khuẩn/vi nấm kháng thuốc định lượng (MIC - cho 1 loại kháng sinh)
+Vi khuẩn/ vi nấm kháng thuốc định tính hoặc vi khuẩn/ vi nấm kháng thuốc trên máy tự động
+Vi nấm nuôi cấy và định danh phương pháp thông thường
+Xác định dịch cúm, á cúm 2 bằng miễn dịch bán tự động/tự động
+HBV kháng thuốc Real-time PCR (cho một loại thuốc)
+Xét nghiệm cặn dư phân
+Chẩn đoán mô bệnh học bệnh phẩm phẫu thuật
+Chọc, hút tuyến tiền liệt, nhuộm và chẩn đoán
+Chọc, hút, nhuộm và chẩn đoán mào tinh hoàn/tinh hoàn trong điều trị vô sinh
+Chọc, hút, nhuộm và chẩn đoán u nang buồng trứng
+Chọc, hút, nhuộm, chẩn đoán các u nang (1 u)
+Chọc, hút, xét nghiệm tế bào các u/ tổn thương sâu
+Sinh thiết và làm tiêu bản tổ chức xương
+Xét nghiệm các loại dịch, nhuộm và chẩn đoán tế bào học
+Xét nghiệm chẩn đoán tế bào học bong bằng phương pháp nhuộm Papanicolaou
+Xét nghiệm cyto (tế bào)
+Xét nghiệm đột biến gen BRAF
+Xét nghiệm đột biến gen EGFR
+Xét nghiệm đột biến gen KRAS
+Xét nghiệm FISH
+Xét nghiệm lai tại chỗ bạc hai màu (Dual-SISH)
+Xét nghiệm lai tại chỗ gắn màu (CISH)
+Cell Bloc (khối tế bào)
+Thin-PAS
+Xét nghiệm và chẩn đoán hoá mô miễn dịch cho một dấu ấn (Marker) chưa bao gồm kháng thể 2 và hóa chất bộc lộ kháng nguyên
+Xét nghiệm và chẩn đoán miễn dịch huỳnh quang cho bộ 6 kháng thể để chẩn đoán mô bệnh học
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Đỏ Công gô
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Giem sa
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Gomori
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Hemtoxylin Eosin
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Mucicarmin
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm PAS (Periodic Acide - Siff)
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Sudan III
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Van Gie’son
+Xét nghiệm và chẩn đoán mô bệnh học bằng phương pháp nhuộm Xanh Alcial
+Xét nghiệm và chẩn đoán mô bệnh học tức thì bằng phương pháp cắt lạnh
+Xét nghiệm và chẩn đoán tế bào học qua chọc hút tế bào bằng kim nhỏ (FNA)
+Thủ thuật loại I
+Thủ thuật loại II
+Thủ thuật loại III
+Định lượng cấp NH3 trong máu
+Định tính porphyrin trong nước tiểu chẩn đoán tiêu cơ vân
+Định tính thuốc gây ngộ độc (1 chỉ tiêu)
+Định tính thuốc trừ sâu (1 chỉ tiêu)
+Đo áp lực thẩm thấu dịch sinh học trên 01 chỉ tiêu
+Xét nghiệm định tính một chỉ tiêu ma túy trong nước tiểu bằng máy Express pluss
+Xét nghiệm sàng lọc và định tính 5 loại ma túy
+Xét nghiệm xác định thành phần hoá chất bảo vệ thực vật bằng sắc ký khí khối phổ
+Xét nghiệm định lượng một chỉ tiêu kim loại nặng trong máu bằng máy AAS
+Xét nghiệm định lượng một chỉ tiêu thuốc trong máu bằng máy sắc ký lỏng khối phổ
+Xét nghiệm định tính một chỉ tiêu độc chất bằng phương pháp sắc ký lớp mỏng
+Xét nghiệm định tính PBG trong nước tiểu
+Xử lý mẫu xét nghiệm độc chất
+Đặt và thăm dò huyết động
+Điện cơ (EMG)
+Điện cơ tầng sinh môn
+Điện não đồ
+Điện tâm đồ
+Điện tâm đồ gắng sức
+Đo áp lực đồ bàng quang
+Đo áp lực đồ cắt dọc niệu đạo
+Đo áp lực thẩm thấu niệu
+Đo áp lực bàng quang bằng cột nước
+Đo áp lực bàng quang bằng máy niệu động học
+Đo áp lực bàng quang ở người bệnh nhi
+Đo áp lực hậu môn trực tràng
+Đo biến đổi thể tích toàn thân - Body Plethysmography
+Đo các chỉ số niệu động học
+Đo các thể tích phổi - Lung Volumes
+Đo chỉ số ABI (Chỉ số cổ chân/cánh tay)
+Đo chức năng hô hấp
+Đo đa ký giấc ngủ
+Đo FeNO
+Đo khuếch tán phổi - Diffusion Capacity
+Đo phế dung kế - Spirometry (FVC, SVC, TLC)/dung tích sống gắng sức - FVC/dung tích sống chậm - SVC/ thông khí tự nguyện tối đa - MVV/áp suất tối đa hít vào/thở ra - MIP / MEP
+Đo vận tốc lan truyền sóng mạch
+Holter điện tâm đồ/ huyết áp
+Lưu huyết não
+Nghiệm pháp dung nạp glucose cho bệnh nhân thường
+Nghiệm pháp dung nạp glucose cho người bệnh thai nghén
+Nghiệm pháp kích Synacthen
+Nghiệm pháp nhịn uống
+Nghiệm pháp ức chế bằng Dexamethason liều cao
+Nghiệm pháp ức chế bằng Dexamethason liều thấp
+Test dung nạp Glucagon
+Test Glucagon gián tiếp (Định lượng C - Peptid thời điểm 0’ và 6’ sau tiêm)
+Test Raven/ Gille
+Test tâm lý BECK/ZUNG
+Test tâm lý MMPI/ WAIS/ WICS
+Test thanh thải Creatinine
+Test thanh thải Ure
+Test trắc nghiệm tâm lý
+Test WAIS/ WICS
+Thăm dò các dung tích phổi
+Thăm dò điện sinh lý trong buồng tim
+Thử nghiệm dung nạp Cabonhydrate (glucoza, fructoza, galactoza, lactoza)
+Thử nghiệm ngấm Bromsulphtalein trong thăm dò chức năng gan

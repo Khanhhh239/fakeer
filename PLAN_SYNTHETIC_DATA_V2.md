@@ -67,26 +67,20 @@ Lợi ích kép:
 | `CHẨN_ĐOÁN` | ICD-VN ≤6 từ, **phân tầng đủ 22 chương** (mỗi chương ≥30 term) + khai thác từ text thật | ≥1.200 form |
 | `TRIỆU_CHỨNG` | ICD chương R + khai thác từ 1.277 bullet đề thi + 490 nhãn `dataset2` | ≥1.000 form |
 | `THUỐC` | 3 nguồn ở mục 1 | ≥1.500 form |
-| `TÊN_XÉT_NGHIỆM` | Danh sách thủ công + khai thác từ text thật (xem 2.2) | ≥400 form |
+| `TÊN_XÉT_NGHIỆM` | **`kb/xetnghiem_ten.txt`, 598 tên trích tự động từ bảng giá thật** (xem 2.2) | 598 form |
 | `KẾT_QUẢ_XÉT_NGHIỆM` | **Sinh theo luật** (xem 2.2) | vô hạn |
 
 **Về phủ chương ICD:** mục tiêu không phải liệt kê hết bệnh mà là **phủ hết KIỂU ĐẶT TÊN** — `viêm...`, `hội chứng...`, `u ác tính...`, `gãy...`, `rối loạn...`, `nhiễm...`. Lấy đều tuyệt đối trên 14.627 term sẽ đầy bệnh hiếm mà đề thi không có. Nên: **mỗi chương ≥30 term để đủ khuôn, phần dư dồn vào chương phổ biến** (hô hấp, tiêu hoá, cơ xương khớp, da liễu, tim mạch).
 
-### 2.2. Sinh XÉT NGHIỆM theo luật — nhiều format
+### 2.2. `TÊN_XÉT_NGHIỆM` — trích tự động, KHÔNG gõ tay
 
-Đây là loại thiếu nhất (13 mẫu ở `dataset2`) nhưng **dễ sinh nhất** vì có cấu trúc rõ. Sinh tổ hợp:
+Loại này thiếu nhất (13 mẫu ở `dataset2`) và ban đầu tôi định gõ tay danh sách viết tắt (`WBC, HGB, CRP...`) — **đúng cái đã bị nhắc nhở**. Sửa lại: đã **trích tự động** 598 tên thật từ một bảng giá viện phí (không có KB chuẩn nào cho xét nghiệm ở Việt Nam — không LOINC, ICD chương Z chỉ là "khám sức khoẻ" không liệt kê xét nghiệm).
 
-**Tên xét nghiệm — 6 dạng viết:**
-```
-viết tắt Latin      : WBC, HGB, RBC, PLT, CRP, AST, ALT, GGT, LDH, HbA1c, PT, INR, BUN
-ion có dấu          : Na+, K+, Cl-, Ca++, HCO3-, Mg++
-tiếng Việt          : công thức máu, chức năng gan, chức năng thận, tổng phân tích nước tiểu
-chẩn đoán hình ảnh  : siêu âm ổ bụng, chụp X-quang phổi, chụp CT sọ não, cộng hưởng từ, điện tâm đồ
-thủ thuật           : nội soi dạ dày, chọc dò dịch não tủy, sinh thiết gan, cấy máu
-có ký hiệu phân tách: PT - INR, Troponin I/T, NEUT%, LYM%, Anti-HCV
-```
+**Cách trích** (chi tiết ở `kb/README.md`): bảng gốc bị làm phẳng khi copy (mỗi ô một dòng). Không tách được bằng hình dạng chuỗi đơn thuần — thử đầu tiên dùng "chữ hoa/ngắn/không dấu cách" để nhận mã lab đã **nhầm chính tên xét nghiệm** (`ACTH`, `ADH`, `CEA` trông giống hệt mã nội bộ `DƯ-MDLS`). Sửa bằng nhìn trước 1 token: dựa vào VỊ TRÍ trong cấu trúc bảng (đứng trước mã khác = mã; đứng trước giá = tên), không dựa vào nội dung chữ. Trích được 598/~610 bản ghi.
 
-**Kết quả — 7 dạng viết:**
+→ **`kb/xetnghiem_ten.txt`** dùng thẳng làm kho DƯƠNG cho loại này, không cần sinh gì thêm.
+
+**Kết quả xét nghiệm — sinh theo LUẬT CẤU TRÚC** (không phải từ vựng, nên gõ công thức là hợp lý, khác với việc gõ tên riêng):
 ```
 số + đơn vị (chấm)  : 14.99 G/L, 6.4 mmol/l, 92 g/L, 2.5 ng/mL
 số + đơn vị (phẩy)  : 4,49 T/l, 6,4 mmol/l          ← thập phân kiểu Việt
@@ -96,8 +90,9 @@ mũi tên / xu hướng  : ↑, ↓, tăng, giảm, tăng nhẹ
 mô tả               : men gan tăng, không thấy bất thường, bình thường, trong giới hạn
 ngưỡng              : < 0.01, > 200, ≤ 5, ≥ 10
 ```
+Đơn vị (`mmol/l`, `g/L`...) lấy từ chính whitelist `UNIT` đã dùng trong `branch_b_lab_tests.py` — tái dùng luật đã kiểm, không bịa thêm.
 
-**Cách ghép tên↔kết quả — 8 format dòng** (bắt buộc trải đều, đây là chỗ luật V1 gãy):
+**Cách ghép tên (từ `xetnghiem_ten.txt`) ↔ kết quả (sinh theo luật) — 8 format dòng**, trải đều để không lệch như luật V1:
 ```
 1. Ure: 6,4 mmol/l              ← dấu hai chấm
 2. Ure : 6,4 mmol/l             ← có cách trước dấu
@@ -109,8 +104,7 @@ ngưỡng              : < 0.01, > 200, ≤ 5, ≥ 10
 8. Ure                          ← ĐỨNG MỘT MÌNH, không có kết quả
    WBC : 14.99 G/L NEUT% : 82.9 %   ← nhiều cặp DÍNH LIỀN trên một dòng
 ```
-
-Format 7 và 8 là **yêu cầu riêng của bạn** và cũng chính là lỗ hổng đã đo: luật V1 bắt buộc "số + đơn vị" nên bỏ sót **85%** tên xét nghiệm (`nội soi` 30 lần → bắt 0).
+Format 7 và 8 là yêu cầu riêng của bạn và cũng là lỗ hổng đã đo: luật V1 bắt buộc "số + đơn vị" nên bỏ sót **85%** tên xét nghiệm (`nội soi` 30 lần → bắt 0).
 
 ### 2.3. Kho ÂM — "giống thực thể nhưng KHÔNG phải" (phần mới, quan trọng)
 
@@ -452,7 +446,7 @@ Không có tập này thì train xong không biết tốt hay xấu — quay l�
 | Dán chuỗi KB, mất ngữ cảnh | `data/dataset` 55.6% | Cổng #2: mật độ 8–18% |
 | Dùng dạng chuẩn KB phi tự nhiên | RxNorm 87% không dùng được | Tách hoạt chất + dựng lại kiểu Việt (§1) |
 | Thiếu khối bệnh án cấu trúc | 0/100 cả hai bộ | T2A template, nhãn đúng 100% (§4) |
-| Thiếu xét nghiệm | KQ chỉ 13 mẫu | Sinh theo luật, 6×7×8 tổ hợp (§2.2) |
+| Thiếu xét nghiệm | KQ chỉ 13 mẫu | 598 tên trích tự động + kết quả sinh theo luật, 8 format ghép (§2.2) |
 | Bỏ sót XN không có kết quả | luật V1 bắt 15% | ≥40% XN đứng một mình (§6.4) |
 | Gán bừa (`chăn màn`→THUỐC) | bài nộp thật | Kho ÂM + cổng #6 (§2.3, §6.1) |
 | False negative | — | Quét từ điển ngược, cổng #5 (§5.3) |
@@ -461,3 +455,4 @@ Không có tập này thì train xong không biết tốt hay xấu — quay l�
 | Nhiễu nhân tạo sai kiểu | `data/dataset` `Khho anội` | Chỉ mô phỏng nhiễu có thật (§6.8) |
 | Lệch phân bố tổng hợp↔thật | — | Tập kiểm định gán tay (§9) |
 | Thuốc chung chung không tra được mã | — | Trường `linkable` (§1) |
+| Gõ tay từ vựng thay vì quét (lỗi của chính tôi, mới bị bắt) | bản đầu của plan này tự gõ danh sách `WBC, HGB...` | Trích tự động bằng parser nhìn-trước-1-token từ bảng giá thật — 598 tên, không gõ tay (§2.2) |
