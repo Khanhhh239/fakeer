@@ -82,9 +82,49 @@ def test_overlap_resolver():
     print("\n" + "="*60)
     print("TEST 4: Overlap Resolver")
     print("="*60)
-    
+
     from utils.overlap_resolver import test_overlap_resolver
     test_overlap_resolver()
+
+def test_segment_units_v2():
+    """V2 K1 — phân đoạn thành unit, gắn heading cha + zone"""
+    print("\n" + "="*60)
+    print("TEST V2: Segment Units (K1)")
+    print("="*60)
+    from segment_units import test_segment_units as _run
+    _run()
+
+def test_span_anchor_v2():
+    """V2 K6 — neo span LLM sinh về văn bản gốc + hàng rào chống ảo giác"""
+    print("\n" + "="*60)
+    print("TEST V2: Span Anchor (K6)")
+    print("="*60)
+    from span_anchor import test_span_anchor as _run
+    _run()
+
+def test_merge_entities_v2():
+    """V2 K7 — hợp nhất nguồn, heading prior, giải xung đột loại"""
+    print("\n" + "="*60)
+    print("TEST V2: Merge Entities (K7)")
+    print("="*60)
+    from merge_entities import test_merge_entities as _run
+    _run()
+
+def test_llm_extract_v2():
+    """V2 K2 — prompt + parse (phần không cần GPU/vllm)"""
+    print("\n" + "="*60)
+    print("TEST V2: LLM Extract prompt/parse (K2)")
+    print("="*60)
+    from llm_extract import test_llm_extract as _run
+    _run()
+
+def test_export_btc_v2():
+    """V2 K8 — chuẩn biên, mở rộng KB, xuất format BTC"""
+    print("\n" + "="*60)
+    print("TEST V2: Export BTC format (K8)")
+    print("="*60)
+    from export_btc import test_export_btc as _run
+    _run()
 
 def test_on_real_data():
     """Test trên data thật từ input/"""
@@ -135,6 +175,11 @@ def run_all_tests():
         ("NER Metrics", test_ner_metrics),
         ("Overlap Resolver", test_overlap_resolver),
         ("Real Data", test_on_real_data),
+        ("V2 Segment Units (K1)", test_segment_units_v2),
+        ("V2 Span Anchor (K6)", test_span_anchor_v2),
+        ("V2 Merge Entities (K7)", test_merge_entities_v2),
+        ("V2 LLM Extract (K2)", test_llm_extract_v2),
+        ("V2 Export BTC (K8)", test_export_btc_v2),
     ]
     
     passed = 0
