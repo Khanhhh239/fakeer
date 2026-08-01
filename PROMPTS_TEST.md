@@ -1,26 +1,32 @@
-# Prompt để test trên Ollama — bản 2, sau khi soi output thật
+# Prompt để test trên Ollama — bản 3
 
 ---
 
-## Nhận xét output vòng 1
+## Nhận xét output vòng 2
 
 | Prompt | Kết quả | Nhận định |
 |---|---|---|
-| **1. Kịch bản** | chưa test lại sau khi thêm few-shot | chờ |
-| **2A. Tên mục** | ❌ **HỎNG NẶNG** | Đến mục ~15 là trôi hẳn: hỏi "tên mục thủ thuật" thì trả về `Triệu chứng`, `Dấu hiệu lâm sàng`; hỏi "tên mục khám lâm sàng" thì trả về `Tím tái da`, `Khó thở`, `Đi tiểu ra máu` — **liệt kê NỘI DUNG thay vì TÊN MỤC**. Lộ tiếng Trung `征象`. Còn tự bịa lượt `user Xin lỗi...` |
-| **3. Văn xuôi** | ✅ **ĐÚNG HƯỚNG**, còn 3 lỗi | Bố cục chuẩn rồi: `Câu hỏi từ người dùng:` + `Câu trả lời của bác sĩ:` + 4 mục đánh số, **không còn đối thoại**. Nhưng: lộ `狂犬病`, lộ `dog bite`/`vi rút rabies`, và **copy nguyên dấu ngoặc `[Bệnh này là gì]` của tôi vào bài** |
-| **4. Kho ÂM** | ⚠️ Được một nửa | Dùng được: `theo dõi`, `tăng liều`, `đặt ống nội khí quản`. Rác: `tiến hành`, `thay đổi`, `điều chỉnh` (động từ trần, không ai nhầm là thực thể), `lavage` (tiếng Anh), `hăm sóc` (sai chính tả), `đóng băng` (vô nghĩa) |
+| **3. Văn xuôi** | ⚠️ Bố cục đúng, còn 2 lỗi | Vẫn lộ ngoặc vuông — **nhưng khác lần trước**: `2. [Nguyên nhân và cách mắc bệnh] — nói về nguyên nhân:` chính là **câu mô tả trong prompt mới của tôi** bị biến thành tiêu đề. Bỏ ngoặc chưa đủ. Và chỉ dùng **10/15** cụm |
+| **4. Kho ÂM** | ❌ Trôi hẳn | Chép nguyên 5 ví dụ của tôi rồi trôi sang `điện thoại di động`, `tắc kè hoa`, `gỗ sồi`, `vải organza`. Output không xuống dòng |
 
-### 4 lỗi gốc rút ra
+### Lỗi gốc vòng 2
 
-1. **Cấm ở cuối là chưa đủ.** Tiếng Trung vẫn lọt 2 lần (`征象`, `狂犬病`). Đặc biệt `狂犬病` là **tên tiếng Trung của bệnh dại** — Qwen "chu đáo" chú thích thêm. Phải cấm **ở đầu và cuối**, và cấm riêng **chú thích trong ngoặc**.
-2. **Không được đặt dấu ngoặc vuông trong phần mô tả.** `[Bệnh này là gì]` tôi viết làm chú thích thì nó copy nguyên vào bài.
-3. **Việc liệt kê trừu tượng bị trôi sau ~10 mục.** Xin 25 thì 15 mục cuối là rác. Phải có few-shot + hạ số lượng.
-4. **Nhiều thứ không cần LLM.** Heading đã quét được **67 tên mục lâm sàng thật** từ chính đề thi — xem mục 2 dưới.
+**1. Model biến câu MÔ TẢ của tôi thành tiêu đề.**
+Tôi viết `Mục 2 nói về nguyên nhân và cách mắc bệnh` để mô tả → nó xuất ra
+`2. [Nguyên nhân và cách mắc bệnh] — nói về nguyên nhân:`.
+→ Không đủ nếu chỉ bỏ ngoặc. Phải **chỉ thẳng mẫu ĐÚNG và mẫu SAI**.
+
+**2. Nhóm ÂM tôi định nghĩa quá rộng.**
+`"vật dụng không dùng để chữa bệnh"` — xét về logic thì `tắc kè hoa`, `điện thoại di động`, `gỗ sồi` đều thoả. Model không sai, **định nghĩa của tôi sai**.
+→ Phải neo vào **văn bản y tế thật**, không hỏi trừu tượng.
+
+**3. Thiếu cụm KHÔNG phải lỗi model.**
+5 cụm thiếu — `sợ nước`, `co thắt hầu họng`, `tăng tiết nước bọt`, `kích thích`, `viêm não` — đều là triệu chứng dại **giai đoạn muộn**. Kịch bản là "vừa bị cắn hôm qua, đang lo lắng", người bệnh chưa phát bệnh. Model **viết đúng y khoa** khi không nhét chúng vào.
+→ Lỗi ở chỗ tôi bó 15 cụm không nhất quán với kịch bản. Xem chính sách xử lý ở mục "Thiếu cụm" bên dưới.
 
 ---
 
-# PROMPT 1 — Sinh kịch bản ca bệnh
+# PROMPT 1 — Sinh kịch bản ca bệnh *(giữ nguyên bản 2, chưa test lại)*
 
 ```
 CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
@@ -45,14 +51,12 @@ QUY TẮC:
    ĐÚNG: TX|công thức máu, TX|siêu âm ổ bụng, TX|nội soi dạ dày
    SAI:  TX|Phương pháp chẩn đoán lâm sàng, TX|Quan sát triệu chứng
 4. TC phải là điều người bệnh CẢM THẤY hoặc bác sĩ THẤY trên người bệnh.
-   Không ghi đường lây, thói quen, cách phòng bệnh.
    ĐÚNG: TC|sốt cao, TC|đau vùng thượng vị
    SAI:  TC|Nhai hoặc mút đồ vật, TC|Sử dụng miệng lưỡi cắn
 5. Mọi mục phải liên quan TRỰC TIẾP tới chẩn đoán đã cho.
 6. Mỗi mục 1-5 từ, viết như bác sĩ ghi bệnh án.
-7. KHÔNG chú thích tên nước ngoài trong ngoặc.
-   SAI: TC|sợ nước (hydrophobia)
-8. Viết xong 11 dòng thì DỪNG. Không giải thích, không hỏi lại, không thêm gì.
+7. KHÔNG chú thích tên nước ngoài trong ngoặc. SAI: TC|sợ nước (hydrophobia)
+8. Viết xong 11 dòng thì DỪNG. Không giải thích, không hỏi lại.
 
 VÍ DỤ — chẩn đoán "Viêm dạ dày":
 TC|đau vùng thượng vị
@@ -74,50 +78,24 @@ Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Khôn
 
 ---
 
-# PROMPT 2 — ĐÃ BỎ, THAY BẰNG QUÉT DỮ LIỆU THẬT
+# PROMPT 2 — ĐÃ BỎ, dùng `kb/heading_lamsang.txt` (67 tên mục quét từ đề thi thật)
 
-Prompt 2A hỏng nặng và **không cần sửa** — vì đã quét được heading thật từ chính 100 file đề thi:
-
-```
-kb/heading_lamsang.txt   67 tên mục lâm sàng
-kb/heading_hoidap.txt     8 tên mục hỏi–đáp
-```
-
-Đây là toàn bộ heading xuất hiện ≥2 lần trong đề thi (419 heading duy nhất, lọc còn 75 cái đáng tin). Vài cái đầu:
-
-```
-Lý do nhập viện                  Tiền sử bệnh hiện tại
-Đánh giá tại bệnh viện           Triệu chứng hiện tại
-Đặc điểm triệu chứng             Thời điểm khởi phát triệu chứng
-Bệnh sử hiện tại                 Các sự kiện trước khi nhập viện
-Diễn biến bệnh                   Các bệnh lý mạn tính
-Thuốc trước khi nhập viện        Các thủ thuật đã thực hiện
-Cận lâm sàng                     Kết quả xét nghiệm
-Kết quả chẩn đoán hình ảnh       Dấu hiệu lâm sàng
-Tiền sử phẫu thuật / thủ thuật   Các phát hiện chẩn đoán khác
-```
-
-**Tốt hơn LLM ở mọi mặt:** có thật, đúng phân bố đề thi, không lộ tiếng Trung, không trôi đề, và **miễn phí**.
-
-### Đa dạng cấu trúc do CODE sinh
-
+Cấu trúc do code sinh:
 ```python
 NUMBERING = [None, '1.', '1)', 'I.', 'A.', 'Mục 1:', '1 -', '(1)']
 BULLET    = ['-', '•', '*', '+', '‣', '·', None, '1.', 'a)', '–']
 INDENT    = ['', '  ', '    ', '      ', '\t']
 COLON     = [':', '', ' :', ' -', '...']
-BLANKS    = [0, 1, 2]
-CASE      = [str, str.upper, str.title]
+BLANKS    = [0, 1, 2];  CASE = [str, str.upper, str.title]
 LAYOUT    = ['bullet', 'inline', 'numbered']
 ```
-
-`8 × 10 × 5 × 5 × 3 × 3 × 3 ≈ 54.000` khung × 67 tên mục × hoán vị thứ tự. LLM không sinh nổi mức này — nhưng đây đúng là thứ code làm tốt nhất, và cũng là chỗ bạn kêu "chẳng đa dạng gì".
+≈54.000 khung × 67 tên mục × hoán vị thứ tự.
 
 ---
 
-# PROMPT 3 — Văn xuôi (sửa 3 lỗi, giữ nguyên bố cục vì đã đúng)
+# PROMPT 3 — Văn xuôi (sửa lỗi tiêu đề)
 
-**Sửa:** bỏ hết dấu ngoặc vuông (bị copy nguyên) · cấm ngôn ngữ ở đầu+cuối · cấm chú thích ngoặc.
+**Sửa chính:** thay vì mô tả từng mục (bị biến thành tiêu đề), **cho sẵn 4 tiêu đề mẫu** và **chỉ rõ mẫu SAI**.
 
 ```
 CHỈ VIẾT BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
@@ -125,24 +103,32 @@ CHỈ VIẾT BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc,
 Bạn là biên tập viên chuyên mục tư vấn sức khoẻ của một trang web y tế Việt Nam.
 Viết MỘT BÀI tư vấn hoàn chỉnh.
 
-BỐ CỤC — giữ nguyên hai dòng tiêu đề, viết nội dung thật vào chỗ mô tả:
+Bài gồm đúng các phần sau, viết liền mạch:
 
 Câu hỏi từ người dùng:
-Người bệnh tự kể bằng lời thường ngày gồm: hoàn cảnh xảy ra, thấy khó chịu
-thế nào, lo lắng gì, rồi đặt câu hỏi. Viết liền mạch 4 đến 6 câu.
+(4 đến 6 câu, người bệnh tự kể: hoàn cảnh, khó chịu ra sao, lo lắng gì, rồi hỏi)
 
 Câu trả lời của bác sĩ:
 Chào bạn,
-Rồi viết đúng 4 mục, mỗi mục bắt đầu bằng số thứ tự và một tiêu đề ngắn do
-bạn tự đặt, sau đó là 4 đến 6 câu văn:
-Mục 1 nói về bản chất của bệnh này là gì.
-Mục 2 nói về nguyên nhân và cách mắc bệnh.
-Mục 3 nói về các xét nghiệm cần làm và ý nghĩa của chúng.
-Mục 4 nói về cách điều trị, thuốc dùng và dặn dò theo dõi.
-Kết thúc bằng dòng: Trân trọng!
+1. Bệnh dại là bệnh gì
+(4 đến 6 câu)
+2. Vì sao mắc bệnh dại
+(4 đến 6 câu)
+3. Những xét nghiệm cần làm
+(4 đến 6 câu)
+4. Điều trị và theo dõi
+(4 đến 6 câu)
+Trân trọng!
 
-CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN TRONG BÀI, không sửa một chữ,
-mỗi cụm dùng đúng một lần. Phải dùng HẾT, không bỏ sót cụm nào:
+CÁCH VIẾT TIÊU ĐỀ MỤC — rất quan trọng:
+ĐÚNG:  1. Bệnh dại là bệnh gì
+ĐÚNG:  2. Vì sao mắc bệnh dại
+SAI:   1. [Bệnh này là gì] — giải thích bản chất bệnh:
+SAI:   2. [Nguyên nhân và cách mắc bệnh] — nói về nguyên nhân:
+Tiêu đề là một câu ngắn bình thường. Không dùng dấu ngoặc vuông.
+Không dùng dấu gạch ngang rồi mô tả lại. Không chép chữ trong hướng dẫn này.
+
+CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN, không sửa một chữ, mỗi cụm một lần:
 - Bệnh dại
 - sợ nước
 - co thắt hầu họng
@@ -150,111 +136,127 @@ mỗi cụm dùng đúng một lần. Phải dùng HẾT, không bỏ sót cụm
 - đau đầu
 - mệt mỏi
 - tăng tiết nước bọt
-- kích thích
 - vắc xin phòng dại
 - huyết thanh kháng dại
-- kháng sinh
 - xét nghiệm kháng thể kháng dại
 - công thức máu
 - chụp cộng hưởng từ sọ não
 - viêm não
 
 QUY TẮC:
-- Tổng bài 500 đến 700 từ. Mục nào cũng đủ 4 đến 6 câu, không viết cụt.
-- Mỗi câu mang một thông tin y khoa mới.
-- Cấm lặp lại ý đã nói dưới cách diễn đạt khác.
-- Cấm câu trấn an rỗng như "đừng lo lắng", "hãy đến khám ngay",
-  "bác sĩ sẽ giúp bạn" nếu không kèm thông tin y khoa cụ thể.
+- Tổng bài 500 đến 700 từ. Mục nào cũng đủ 4 đến 6 câu.
+- Mỗi câu mang một thông tin y khoa mới. Cấm lặp ý đã nói.
+- Cấm câu trấn an rỗng như "đừng lo lắng", "hãy đến khám ngay" nếu không
+  kèm thông tin y khoa cụ thể.
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
 - Cấm chú thích tên bệnh bằng tiếng nước ngoài trong ngoặc.
   Viết "Bệnh dại", KHÔNG viết "Bệnh dại (rabies)" hay "Bệnh dại (狂犬病)".
-- Cấm dùng từ tiếng Anh. Viết "chó cắn", không viết "dog bite".
-  Viết "vi rút dại", không viết "vi rút rabies".
+- Cấm từ tiếng Anh. Viết "chó cắn" không viết "dog bite".
+  Viết "vi rút dại" không viết "vi rút rabies".
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
-- Không chép lại các dòng hướng dẫn ở trên vào bài viết.
 
-Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không chú thích trong ngoặc.
+Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không ngoặc vuông.
 ```
 
-**Kiểm sau khi chạy:**
-
-| Tiêu chí | Đạt khi |
-|---|---|
-| Độ dài | 1.500–4.000 ký tự |
-| Bố cục | Đủ 2 dòng tiêu đề + 4 mục đánh số + `Trân trọng!` |
-| Không lộ hướng dẫn | Không thấy chữ `Mục 1 nói về...` trong bài |
-| Đủ cụm | **15/15** cụm xuất hiện nguyên văn *(vòng 1 chỉ đạt 10/15)* |
-| Ngôn ngữ | Không có chữ Hán, không có từ tiếng Anh |
-
-Nếu vẫn thiếu cụm: **giảm còn 12 cụm** thay vì ép. Thiếu cụm thì code loại mẫu và sinh lại, không phải lỗi chết người.
+> **Đã bỏ 2 cụm** `kích thích` và `kháng sinh` khỏi danh sách (còn 13). Lý do ở mục dưới.
 
 ---
 
-# PROMPT 4 — Kho ÂM (thêm few-shot, hạ số lượng)
+## Thiếu cụm thì sao — chính sách xử lý
 
-**Sửa:** vòng 1 ra động từ trần (`tiến hành`, `thay đổi`) — không ai nhầm mấy cái đó là thực thể nên vô dụng làm ca âm. Cần **cụm danh từ nhìn giống thực thể**.
+Đây là câu hỏi quan trọng nhất của vòng này. Trả lời: **thiếu cụm là chuyện BÌNH THƯỜNG, không cần ép đủ.**
+
+### Vì sao thiếu
+
+5 cụm thiếu ở vòng 2 (`sợ nước`, `co thắt hầu họng`, `tăng tiết nước bọt`, `kích thích`, `viêm não`) đều là biểu hiện dại **giai đoạn muộn**. Kịch bản là *"vừa bị cắn hôm qua"* — người bệnh chưa phát bệnh. Model **viết đúng y khoa** khi không nhét chúng vào. Ép nó dùng sẽ tạo ra văn bản **sai về mặt y học** — tệ hơn nhiều so với việc thiếu vài nhãn.
+
+### Cách xử lý đúng — 3 tầng
+
+**Tầng 1 — Chấp nhận một phần (quan trọng nhất).**
+Không cần đủ 15. Chỉ cần **gán nhãn đúng những cụm ĐÃ xuất hiện**. 10 nhãn đúng vẫn là 10 mẫu huấn luyện tốt.
+
+```python
+found  = [e for e in required if text.count(e) == 1]
+missing = [e for e in required if e not in text]
+if len(found) / len(required) >= 0.6:      # >= 60% -> NHẬN
+    label(found)                            # chỉ gán cụm đã xuất hiện
+else:
+    reject_and_retry()                      # quá ít -> mẫu loãng, sinh lại
+```
+
+Ngưỡng 60%: vòng 2 đạt 10/15 = 67% → **nhận, không phải sinh lại**.
+
+**Tầng 2 — Bó thực thể phải nhất quán với kịch bản.**
+Lỗi gốc là tôi trộn triệu chứng sớm và muộn vào cùng một ca. Sửa: chọn **một giai đoạn**, rồi lấy thực thể hợp giai đoạn đó.
+
+| Kịch bản | Thực thể nên đưa |
+|---|---|
+| Vừa bị cắn, dự phòng | vết cắn, vắc xin phòng dại, huyết thanh kháng dại, xét nghiệm kháng thể kháng dại |
+| Đã phát bệnh | sợ nước, co thắt hầu họng, tăng tiết nước bọt, viêm não, chụp cộng hưởng từ sọ não |
+
+Hai kịch bản → **hai tài liệu riêng**, không nhồi chung.
+
+**Tầng 3 — Quét từ điển ngược vẫn bắt được phần dôi ra.**
+Model có thể tự thêm cụm ngoài danh sách (ví dụ nó viết `vết cắn`, `nhiễm trùng` mà ta không yêu cầu). Bước quét từ điển ngược gán nhãn luôn những cụm đó → **bù lại phần thiếu**.
+
+### Cụm nên bỏ khỏi danh sách yêu cầu
+
+| Cụm | Vì sao bỏ |
+|---|---|
+| `kích thích` | Quá đa nghĩa. Model dùng theo nghĩa thường (`chất kích thích`, `kích thích thần kinh`) → dễ trùng nhiều lần, không neo được |
+| `kháng sinh` | Không dùng điều trị bệnh dại. Ép vào tạo nội dung sai y khoa |
+| `sốt` | ⚠️ Giữ nhưng cẩn thận — là **chuỗi con** của `sốt nhẹ`, `hạ sốt`, `sốt cao`. Code phải khớp theo **ranh giới từ**, không dùng `in` thuần |
+
+---
+
+# PROMPT 4 — Kho ÂM (ĐỔI CÁCH LÀM: neo vào văn bản thật)
+
+**Vì sao đổi:** hỏi trừu tượng `"vật dụng không dùng để chữa bệnh"` thì `tắc kè hoa`, `điện thoại di động` đều đúng logic. Không thể sửa bằng cách viết chặt hơn — **bản thân câu hỏi sai**.
+
+**Cách đúng:** đưa một đoạn văn y tế THẬT, bảo nó chỉ ra cụm nào không phải thực thể. Output **kiểm chứng được** vì phải là chuỗi con của đoạn đã cho.
 
 ```
 CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
 
-Trong bệnh án tiếng Việt có nhiều cụm từ TRÔNG GIỐNG tên bệnh, tên thuốc hoặc
-tên xét nghiệm, nhưng thực chất KHÔNG PHẢI. Tôi cần thu thập các cụm đó.
+Dưới đây là một đoạn trong bài tư vấn y tế. Hãy tìm các CỤM DANH TỪ trong đoạn
+này mà một máy tính dễ NHẦM là tên bệnh, tên thuốc hoặc tên xét nghiệm, nhưng
+thực chất KHÔNG PHẢI.
 
-Hãy liệt kê 15 cụm thuộc nhóm: CÁC VẬT DỤNG VÀ HOÁ CHẤT KHÔNG DÙNG ĐỂ CHỮA BỆNH
-
-VÍ DỤ đúng cho nhóm này:
-thuốc lá
-thuốc trừ sâu
-băng phiến
-long não
-thuốc nhuộm tóc
+ĐOẠN VĂN:
+"Trẻ thiếu men G6PD cần tránh tiếp xúc với băng phiến, long não đặt trong tủ
+quần áo và chăn màn. Không dùng thuốc nam, thuốc đông y khi chưa hỏi ý kiến
+bác sĩ. Mẹ đang cho con bú không nên dùng các chất chống chỉ định. Khi đi khám
+tại khoa nhi, luôn thông báo cho nhân viên y tế về tình trạng của trẻ. Trẻ vẫn
+ăn ngủ bình thường, đại tiện bình thường thì không cần lo lắng."
 
 YÊU CẦU:
-- Mỗi dòng một cụm, không đánh số, không giải thích.
-- Phải là CỤM DANH TỪ, 1 đến 4 từ. Không phải động từ.
-  ĐÚNG: băng phiến, thuốc trừ sâu
-  SAI:  tiến hành, thay đổi, điều chỉnh
-- Phải là thứ dễ bị nhầm là thuốc hoặc bệnh, nhưng thật ra không phải.
-- Viết đúng chính tả tiếng Việt có dấu.
-- Liệt kê xong 15 dòng thì DỪNG, không viết thêm gì.
+- Chỉ lấy cụm CÓ THẬT trong đoạn văn trên, chép nguyên văn.
+- Mỗi cụm một dòng riêng. Xuống dòng sau mỗi cụm.
+- Không đánh số, không giải thích, không thêm chữ nào khác.
+- Chỉ lấy cụm dễ bị nhầm là bệnh/thuốc/xét nghiệm.
+  Ví dụ trong đoạn trên: "băng phiến" dễ nhầm là thuốc vì nó là hoá chất.
+  Còn "tủ quần áo" thì không ai nhầm, đừng lấy.
+- Không lấy tên bệnh thật, tên thuốc thật, tên xét nghiệm thật.
+- Liệt kê xong thì DỪNG.
 
 Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh.
 ```
 
-Chạy lại prompt trên, thay phần in hoa **và cả 5 dòng ví dụ** theo bảng:
+**Kỳ vọng:** `băng phiến`, `long não`, `chăn màn`, `thuốc nam`, `thuốc đông y`, `khoa nhi`, `ăn ngủ bình thường`, `đại tiện bình thường`.
 
-| # | Thay chỗ in hoa | Thay 5 dòng ví dụ |
-|---|---|---|
-| 1 | `CÁC VẬT DỤNG VÀ HOÁ CHẤT KHÔNG DÙNG ĐỂ CHỮA BỆNH` | thuốc lá / thuốc trừ sâu / băng phiến / long não / thuốc nhuộm tóc |
-| 2 | `TÊN CÁC KHOA PHÒNG TRONG BỆNH VIỆN` | khoa nội tổng hợp / phòng khám da liễu / khoa cấp cứu / phòng mổ / khoa truyền nhiễm |
-| 3 | `CÁC CỤM MÔ TẢ CƠ THỂ HOẠT ĐỘNG BÌNH THƯỜNG` | ăn ngủ bình thường / đại tiện bình thường / kinh nguyệt đều / da niêm hồng / tinh thần tỉnh táo |
-| 4 | `CÁC THÓI QUEN VÀ YẾU TỐ NGUY CƠ` | hút thuốc lá / uống rượu bia / ăn mặn / ít vận động / thức khuya |
-| 5 | `CÁC CỤM CHỈ THỜI GIAN VÀ THÔNG TIN HÀNH CHÍNH` | cách đây ba ngày / giường số năm / khoa phòng điều trị / số hồ sơ / ngày ra viện |
-| 6 | `CÁC THỦ THUẬT ĐIỀU TRỊ, KHÔNG PHẢI ĐỂ CHẨN ĐOÁN` | truyền dịch / thở oxy / ghép thận / phẫu thuật cắt ruột thừa / xạ trị |
+**Kiểm tự động được:** mọi dòng output phải là chuỗi con của đoạn đã cho — không thoả thì loại. Đây là điều Prompt 4 cũ **không** làm được (không cách nào kiểm `tắc kè hoa` đúng hay sai).
 
-**Nhóm 1 quan trọng nhất** — `băng phiến`, `chăn màn` đã bị model gán nhầm THUỐC ở bài nộp thật.
-
-⚠️ Kho ÂM **phải loại khỏi kho DƯƠNG** trước khi chạy quét từ điển ngược, nếu không chính bước chống-bỏ-sót sẽ tự gán nhãn cho các ca âm này.
+**Chạy hàng loạt:** thay ĐOẠN VĂN bằng từng đoạn lấy từ 100 file `input/*.txt`. Vừa đúng phân bố thật, vừa kiểm chứng được, vừa không cần nghĩ ra nhóm nào cho đủ.
 
 ---
 
-# Xử lý lỗi Ollama tự bịa lượt hội thoại
-
-Vòng 1 có đoạn `user Xin lỗi, có vẻ như có sự hiểu lầm...` — model tự sinh lượt của người dùng rồi tự trả lời. Đây là lỗi **stop token** của Ollama, không phải lỗi nội dung.
-
-Cách xử lý:
-- Đã thêm câu `"Viết xong ... thì DỪNG"` vào cuối mỗi prompt
-- Khi chạy bằng code, đặt `stop=["user", "User", "\nuser", "assistant"]`
-- Nếu vẫn bị: cắt output tại dòng đầu tiên chứa `user` hoặc `assistant`
-
----
-
-# Thứ tự test vòng 2
+# Thứ tự test vòng 3
 
 | # | Prompt | Xem gì |
 |---|---|---|
-| 1 | Prompt 1 — `"Bệnh dại"` | Đủ 11 dòng · không bịa thuốc · không từ meta · không tiếng Anh |
-| 2 | Prompt 1 — `"Trứng cá"` | Còn lạc đề như `Đau vùng chậu`, `Chụp X-quang ổ bụng` không |
-| 3 | Prompt 3 | Có còn lộ `[Bệnh này là gì]` không · đủ 15/15 cụm · không chữ Hán |
-| 4 | Prompt 4 nhóm 1 | Ra danh từ (`băng phiến`) hay động từ trần (`tiến hành`) |
-| 5 | — | **Bỏ qua Prompt 2**, đã có `kb/heading_lamsang.txt` |
+| 1 | Prompt 3 | Tiêu đề có còn `[...]` và `— nói về...` không · số cụm đạt (mục tiêu ≥8/13) |
+| 2 | Prompt 4 | Mọi dòng có nằm trong đoạn văn đã cho không · có xuống dòng không |
+| 3 | Prompt 1 — `"Bệnh dại"` | Đủ 11 dòng · không bịa thuốc · không từ meta |
+| 4 | Prompt 1 — `"Trứng cá"` | Còn lạc đề không |
+
+Nếu Prompt 3 vòng này vẫn lộ tiêu đề sai → chuyển sang cách cuối: **đưa nguyên một bài mẫu hoàn chỉnh về bệnh khác** làm few-shot, thay vì mô tả bố cục.
