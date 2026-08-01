@@ -111,10 +111,43 @@ MAX_ENTITIES_PER_SHORT_UNIT = 6
 SHORT_UNIT_WORDS = 15
 
 
+# Trần độ dài theo LOẠI, tính bằng SỐ TỪ.
+#
+# VÌ SAO CẦN — đo được, không phải phòng xa: bài nộp V2 đầu tiên bảo LLM "lấy
+# cụm ĐẦY ĐỦ NHẤT" nên nó nuốt trọn cả câu. Số TỪ tăng 94% (5539 -> 10738)
+# trong khi số thực thể chỉ tăng 19%, và WER xấu đi 63.56 -> 72.71. WER tính
+# trên TỪ: một span 27 từ gán sai vừa tạo 27 lượt insertion, vừa che mất khái
+# niệm thật nằm bên trong (thêm deletion) — đắt gấp nhiều lần việc bỏ qua nó.
+# Theo NL1 (bỏ sót và trích thừa phạt ngang nhau) thì với span dài bất thường,
+# BỎ có lợi hơn GIỮ.
+#
+# CÁCH CHỌN SỐ: xuất phát từ phân vị của chính bài chấm tốt hơn (WER 63.56),
+# nhưng có hiệu chỉnh ở hai loại mà phân bố của bài đó BỊ THIÊN LỆCH:
+#   - TÊN_XÉT_NGHIỆM: bài đó trích bằng luật "số + đơn vị" nên chỉ bắt được
+#     viết tắt ngắn ('SPO2', 'BC', '- ast'); p95=4 của nó không phản ánh độ
+#     dài thật của tên thủ thuật ('chụp CT sọ não', 'siêu âm tim') -> nới 5.
+#   - THUỐC: bài đó khớp từ điển RxNorm vốn trả tên đơn lẻ ('doxycycline',
+#     'Vitamin K'); cụm thuốc thật dài hơn ('thuốc giảm đau opioid') -> nới 4.
+#   - CHẨN_ĐOÁN lấy p99=8 thay p95=7, vì tên bệnh tiếng Việt thật sự dài
+#     ('tụ máu ngoài màng cứng phải cấp tính' = 8 từ).
+# Kết quả trên chính dữ liệu V2: 10738 -> 6169 từ (1.11x ngân sách bài tốt),
+# vẫn giữ TÊN_XÉT_NGHIỆM gấp ~4 lần bài tốt (261 so với 67).
+MAX_WORDS_BY_TYPE = {
+    'THUỐC': 4,
+    'TÊN_XÉT_NGHIỆM': 5,
+    'KẾT_QUẢ_XÉT_NGHIỆM': 4,
+    'TRIỆU_CHỨNG': 5,
+    'CHẨN_ĐOÁN': 8,
+}
+MAX_WORDS_DEFAULT = 6
+
+
 def _structural_gate(etype: str, text: str) -> bool:
     """Chặn cấu trúc BẤT KỂ LLM tự tin bao nhiêu — bài học từ V1: model có
     thể rất tự tin mà vẫn sai (xem 65acb97). True = giữ, False = loại."""
     t = text.strip()
+    if len(t.split()) > MAX_WORDS_BY_TYPE.get(etype, MAX_WORDS_DEFAULT):
+        return False                # span dài bất thường -> gần như chắc là cả câu
     if etype == 'TÊN_XÉT_NGHIỆM' and _NUM_ONLY.match(t):
         return False                # số thuần không thể là TÊN xét nghiệm
     if etype == 'KẾT_QUẢ_XÉT_NGHIỆM' and not re.search(r'\d', t) and not _QUAL_VALUE.match(t):
@@ -215,6 +248,38 @@ def test_span_anchor():
     ok4 = len(ents4) <= MAX_ENTITIES_PER_SHORT_UNIT
     print(f"  {'✓' if ok4 else '✗'} chặn mật độ unit ngắn -> {len(raw4)} đề xuất -> {len(ents4)} giữ")
     failed += not ok4
+
+    # chặn ĐỘ DÀI theo loại — đây là lỗi đã làm WER xấu đi 63.6 -> 72.7 ở
+    # bài nộp V2 đầu tiên (LLM nuốt trọn cả câu làm một thực thể)
+    long_sent = ('Chụp kiểm tra ghi nhận tụ máu ngoài màng cứng phải cấp tính '
+                 'trên nền tổn thương mạn tính')
+    unit5 = {'text': long_sent, 'start': 0, 'heading': 'Diễn biến bệnh', 'zone': 'clinical'}
+    ents5 = verify_unit_entities([('CD', long_sent)], unit5, {'CD': 'CHẨN_ĐOÁN'})
+    ok5 = ents5 == []
+    print(f"  {'✓' if ok5 else '✗'} chặn cả câu {len(long_sent.split())} từ gán CHẨN_ĐOÁN -> giữ {len(ents5)}")
+    failed += not ok5
+
+    # nhưng cụm LÕI trong chính câu đó vẫn phải qua được — tên bệnh tiếng Việt
+    # thật sự dài tới 8 từ, đây là lý do trần CHẨN_ĐOÁN lấy p99 chứ không p95
+    core = 'tụ máu ngoài màng cứng phải cấp tính'   # đúng 8 từ = trần CHẨN_ĐOÁN
+    assert len(core.split()) == 8, 'test tự mâu thuẫn: lõi phải đúng 8 từ'
+    ents6 = verify_unit_entities([('CD', core)], unit5, {'CD': 'CHẨN_ĐOÁN'})
+    ok6 = len(ents6) == 1 and ents6[0]['text'] == core
+    print(f"  {'✓' if ok6 else '✗'} lõi {len(core.split())} từ vẫn qua -> {[e['text'] for e in ents6]}")
+    failed += not ok6
+
+    # trần RIÊNG theo loại: cùng một cụm, TÊN_XÉT_NGHIỆM (trần 5) cho qua
+    # nhưng KẾT_QUẢ_XÉT_NGHIỆM (trần 4) thì chặn
+    u7 = {'text': 'chụp CT sọ não toàn bộ có cản quang', 'start': 0,
+          'heading': 'Các thủ thuật đã thực hiện', 'zone': 'clinical'}
+    five = 'chụp CT sọ não toàn'          # 5 từ
+    six = 'chụp CT sọ não toàn bộ'        # 6 từ
+    assert len(five.split()) == 5 and len(six.split()) == 6, 'test tự mâu thuẫn'
+    keep7 = verify_unit_entities([('TX', five)], u7, {'TX': 'TÊN_XÉT_NGHIỆM'})
+    drop7 = verify_unit_entities([('TX', six)], u7, {'TX': 'TÊN_XÉT_NGHIỆM'})
+    ok7 = len(keep7) == 1 and drop7 == []
+    print(f"  {'✓' if ok7 else '✗'} trần TÊN_XÉT_NGHIỆM=5 từ -> 5từ:{len(keep7)} 6từ:{len(drop7)}")
+    failed += not ok7
 
     print(f"\n{'='*60}")
     if failed:

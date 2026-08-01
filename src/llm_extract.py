@@ -43,8 +43,11 @@ KQ = KẾT_QUẢ_XÉT_NGHIỆM  giá trị hoặc kết luận của xét nghi�
 
 QUY TẮC:
 1. COPY NGUYÊN VĂN từ đoạn — không sửa chữ, không đổi dấu, không diễn giải.
-2. Lấy cụm ĐẦY ĐỦ NHẤT có nghĩa. "đau bụng vùng hạ sườn phải" là MỘT thực
-   thể, không tách thành "đau bụng".
+2. Lấy cụm NGẮN NHẤT mà vẫn đủ nghĩa y khoa. TUYỆT ĐỐI KHÔNG lấy cả câu,
+   cả mệnh đề, cả dòng. Chỉ lấy phần TÊN của khái niệm, bỏ hết phần mô tả
+   hoàn cảnh, thời điểm, nguyên nhân, diễn biến bao quanh nó.
+   Hầu hết thực thể dài 1-4 từ. Nếu cụm bạn định lấy dài quá 8 từ thì gần
+   như chắc chắn bạn đang lấy cả câu — hãy rút lại còn phần lõi.
 3. Bỏ qua: thời gian, tuổi, tên người, lời khuyên, câu hỏi, "Không ghi rõ".
 4. "Mục:" cho biết loại thường gặp trong đoạn — dùng làm GỢI Ý, không phải
    luật cứng; nếu nội dung thật sự thuộc loại khác thì cứ gán loại đúng.
@@ -56,15 +59,27 @@ Không có thực thể nào thì trả về đúng một dòng: KHÔNG"""
 # thật để không dạy model gộp nhiều dòng — và LUÔN có ít nhất một ví dụ
 # KHÔNG, nếu không model sẽ cố sinh ra thứ gì đó cho mọi đoạn (bài học từ
 # lỗi kinh điển của few-shot toàn ví dụ dương).
+#
+# ĐO ĐƯỢC (bài nộp V2 đầu tiên): bản prompt trước bảo "lấy cụm ĐẦY ĐỦ NHẤT"
+# khiến model nuốt trọn cả bullet — số TỪ tăng 94% (5539 -> 10738) trong khi
+# số thực thể chỉ tăng 19%, WER xấu đi 63.6 -> 72.7. WER tính trên TỪ nên một
+# span 27 từ sai làm hỏng điểm gấp nhiều lần một span 3 từ sai. Vì vậy 3
+# ví dụ cuối dạy THẲNG việc rút lõi ra khỏi câu dài — đó mới là ca khó, không
+# phải ca bullet vốn đã ngắn sẵn.
 FEWSHOT: List[Tuple[str, str]] = [
     ("Mục: Kết quả xét nghiệm\nĐoạn: Công thức máu, CRP, máu lắng",
      "TX|Công thức máu\nTX|CRP\nTX|máu lắng"),
     ("Mục: Triệu chứng hiện tại\nĐoạn: đau bụng vùng hạ sườn phải",
      "TC|đau bụng vùng hạ sườn phải"),
-    ("Mục: Các bệnh lý mạn tính\nĐoạn: tăng huyết áp",
-     "CD|tăng huyết áp"),
     ("Mục: None\nĐoạn: Cảm ơn bác sĩ đã tư vấn cho em.",
      "KHÔNG"),
+    # rút lõi khỏi câu dài: bỏ "Chụp kiểm tra ghi nhận", giữ đúng tên bệnh
+    ("Mục: Diễn biến bệnh\nĐoạn: Chụp kiểm tra ghi nhận tụ máu ngoài màng cứng "
+     "phải cấp tính trên nền tổn thương mạn tính",
+     "CD|tụ máu ngoài màng cứng phải cấp tính"),
+    # bỏ hoàn cảnh "khi gắng sức trong tuần qua", giữ đúng triệu chứng
+    ("Mục: Triệu chứng hiện tại\nĐoạn: Cảm thấy mệt mỏi nhiều khi gắng sức trong tuần qua",
+     "TC|mệt mỏi"),
     ("Mục: Kết quả xét nghiệm\nĐoạn: Xét nghiệm chức năng gan cho thấy men gan tăng",
      "TX|Xét nghiệm chức năng gan\nKQ|men gan tăng"),
 ]
