@@ -1,0 +1,67 @@
+Lý do nhập viện
+Tiền sử bệnh hiện tại
+Đánh giá tại bệnh viện
+Tiền sử bệnh
+Triệu chứng hiện tại
+Đặc điểm triệu chứng
+Thời điểm khởi phát triệu chứng
+Bệnh sử hiện tại
+Các sự kiện trước khi nhập viện
+Diễn biến bệnh
+Các bệnh lý mạn tính
+Thuốc trước khi nhập viện
+Các thủ thuật đã thực hiện
+Tiền sử bệnh nội khoa
+Điều trị
+Các phát hiện chẩn đoán khác
+Các triệu chứng hiện tại
+Tiền sử phẫu thuật / thủ thuật
+Cận lâm sàng
+Kết quả xét nghiệm
+Sự kiện trước khi nhập viện
+Kết quả chẩn đoán hình ảnh
+Các yếu tố nguy cơ liên quan
+Các bệnh lý mãn tính
+Triệu chứng khi nhập viện
+Tiền sử bệnh lý
+Bệnh sử
+Dấu hiệu lâm sàng
+Chẩn đoán
+Bệnh lý mãn tính
+Mức độ nghiêm trọng của vết cắn
+Tình trạng miễn dịch của bệnh nhân
+Huyết áp
+Nhiệt độ
+Nhịp thở
+Thủ thuật thực hiện
+Các tập tương tự trước đây
+Tình trạng ngay trước khi nhập viện
+Thuốc trước khi nhập viện lần này
+Diễn biến
+Các bệnh mãn tính
+Khám lâm sàng
+Đặc điểm của triệu chứng
+Siêu âm tim
+Ban đỏ toàn thân
+Tiền sử gia đình
+Lâm sàng
+Bệnh nhân có tiền sử dụng thuốc
+Tiền sử bệnh bệnh hiện tại
+Kết quả thăm khám lâm sàng
+Bụng mềm, không chướng
+Xét nghiệm cần làm
+Diễn biên  trước khi nhập viện
+Da niêm mạc hồng
+Khám hiện tại thấy
+Bệnh nhân tỉnhi
+Kết quả khám thực thể
+Khám tại bệnh viện
+Liệu pháp **************
+PUVA (psoralen kết hợp UVA)
+Chúc bạn sức khoẻ
+Dị ứng
+Bệnh nhân tỉnh
+Tình trạng khi đến khoa Cấp cứu
+Bệnh nhân tỉnh, tiếp xúc tốt
+Triệu chứng khi vào viện
+Thủ thuật

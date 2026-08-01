@@ -1,26 +1,30 @@
-# Prompt để test trên Ollama — bản viết lại sau khi soi lỗi thật
-
-> Mọi prompt đều kết thúc bằng dòng cấm tiếng Trung/Anh (theo yêu cầu, vì Qwen từng phun tiếng Trung).
+# Prompt để test trên Ollama — bản 2, sau khi soi output thật
 
 ---
 
-## Chẩn đoán sai của 3 prompt cũ
+## Nhận xét output vòng 1
 
-| Prompt | Triệu chứng hỏng | Nguyên nhân GỐC |
+| Prompt | Kết quả | Nhận định |
 |---|---|---|
-| **1. Sinh kịch bản** | `TH\|Tiêm antirôsin` (bịa thuốc), `TH\|Antibiotic uống` (tiếng Anh), `TX\|Phương pháp chẩn đoán lâm sàng` (không phải tên XN), `TC\|Đau vùng chậu` cho bệnh trứng cá (sai liên hệ) | **Không có few-shot** → model không biết độ hạt mong muốn. Và **bắt nó BỊA tên xét nghiệm** trong khi ta đã có sẵn 598 tên thật trong `kb/xetnghiem_ten.txt` |
-| **2. Template** | Chỉ đảo thứ tự + xuống dòng, không thụt lề, không đánh số mục | **Mỗi lần gọi LLM là STATELESS** — câu "khác với khung trước" hoàn toàn vô nghĩa. Và LLM **mode-collapse khi bị bảo "hãy đa dạng"**. Đa dạng tổ hợp là việc của CODE, không phải của LLM |
-| **3. Văn xuôi** | Ra hội thoại qua lại, quá ngắn; ép dài thì lặp lời sáo rỗng | Tôi bảo "viết hỏi–đáp giữa bệnh nhân và bác sĩ" → nó viết đối thoại. **Đo lại: 0/100 file đề thi là đối thoại.** Format thật là *bài viết* Q&A một chiều. Thêm nữa: 4 thực thể thì không có gì để viết 1500 ký tự, nên nó độn lời khuyên rỗng |
+| **1. Kịch bản** | chưa test lại sau khi thêm few-shot | chờ |
+| **2A. Tên mục** | ❌ **HỎNG NẶNG** | Đến mục ~15 là trôi hẳn: hỏi "tên mục thủ thuật" thì trả về `Triệu chứng`, `Dấu hiệu lâm sàng`; hỏi "tên mục khám lâm sàng" thì trả về `Tím tái da`, `Khó thở`, `Đi tiểu ra máu` — **liệt kê NỘI DUNG thay vì TÊN MỤC**. Lộ tiếng Trung `征象`. Còn tự bịa lượt `user Xin lỗi...` |
+| **3. Văn xuôi** | ✅ **ĐÚNG HƯỚNG**, còn 3 lỗi | Bố cục chuẩn rồi: `Câu hỏi từ người dùng:` + `Câu trả lời của bác sĩ:` + 4 mục đánh số, **không còn đối thoại**. Nhưng: lộ `狂犬病`, lộ `dog bite`/`vi rút rabies`, và **copy nguyên dấu ngoặc `[Bệnh này là gì]` của tôi vào bài** |
+| **4. Kho ÂM** | ⚠️ Được một nửa | Dùng được: `theo dõi`, `tăng liều`, `đặt ống nội khí quản`. Rác: `tiến hành`, `thay đổi`, `điều chỉnh` (động từ trần, không ai nhầm là thực thể), `lavage` (tiếng Anh), `hăm sóc` (sai chính tả), `đóng băng` (vô nghĩa) |
 
-**Bài học chung:** không ép LLM làm việc nó dở (ngẫu nhiên hoá, tự kiềm chế bịa). Giao nó việc nó giỏi (viết văn, liệt kê từ đồng nghĩa), phần còn lại để code.
+### 4 lỗi gốc rút ra
+
+1. **Cấm ở cuối là chưa đủ.** Tiếng Trung vẫn lọt 2 lần (`征象`, `狂犬病`). Đặc biệt `狂犬病` là **tên tiếng Trung của bệnh dại** — Qwen "chu đáo" chú thích thêm. Phải cấm **ở đầu và cuối**, và cấm riêng **chú thích trong ngoặc**.
+2. **Không được đặt dấu ngoặc vuông trong phần mô tả.** `[Bệnh này là gì]` tôi viết làm chú thích thì nó copy nguyên vào bài.
+3. **Việc liệt kê trừu tượng bị trôi sau ~10 mục.** Xin 25 thì 15 mục cuối là rác. Phải có few-shot + hạ số lượng.
+4. **Nhiều thứ không cần LLM.** Heading đã quét được **67 tên mục lâm sàng thật** từ chính đề thi — xem mục 2 dưới.
 
 ---
 
 # PROMPT 1 — Sinh kịch bản ca bệnh
 
-**Thay đổi chính:** thêm few-shot đầy đủ · cấm động từ dẫn · cấm từ meta · nêu rõ TX phải là *tên* xét nghiệm chứ không phải *phương pháp*.
-
 ```
+CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
+
 Bạn là bác sĩ Việt Nam. Với chẩn đoán được cho, liệt kê các khái niệm y khoa
 thường đi kèm trong bệnh án.
 
@@ -29,24 +33,26 @@ thường đi kèm trong bệnh án.
   TH = tên thuốc điều trị
   TX = tên xét nghiệm / thăm dò / thủ thuật chẩn đoán
 
-SỐ LƯỢNG: 5 dòng TC, 3 dòng TH, 3 dòng TX.
+SỐ LƯỢNG: 5 dòng TC, 3 dòng TH, 3 dòng TX. Tổng đúng 11 dòng.
 
-QUY TẮC BẮT BUỘC:
+QUY TẮC:
 1. Chỉ ghi TÊN, không ghi động từ đi kèm.
-   ĐÚNG: TH|amoxicillin        SAI: TH|Tiêm amoxicillin, TH|Uống amoxicillin
-2. TH phải là tên thuốc CÓ THẬT (hoạt chất hoặc nhóm thuốc). Không được bịa.
+   ĐÚNG: TH|amoxicillin        SAI: TH|Tiêm amoxicillin
+2. TH phải là tên thuốc CÓ THẬT. Không bịa.
    ĐÚNG: TH|paracetamol, TH|kháng sinh, TH|corticoid
-   SAI:  TH|antirôsin, TH|thuốc đặc trị
+   SAI:  TH|antirôsin, TH|thuốc đặc trị, TH|Antibiotic uống
 3. TX phải là TÊN một xét nghiệm cụ thể, KHÔNG phải mô tả cách làm.
    ĐÚNG: TX|công thức máu, TX|siêu âm ổ bụng, TX|nội soi dạ dày
-   SAI:  TX|Phương pháp chẩn đoán lâm sàng, TX|Quan sát triệu chứng, TX|Chẩn đoán lâm sàng
-4. TC phải là điều người bệnh CẢM THẤY hoặc bác sĩ THẤY được trên người bệnh.
-   KHÔNG ghi đường lây, thói quen, hay cách phòng bệnh.
-   ĐÚNG: TC|sốt cao, TC|đau bụng vùng thượng vị
+   SAI:  TX|Phương pháp chẩn đoán lâm sàng, TX|Quan sát triệu chứng
+4. TC phải là điều người bệnh CẢM THẤY hoặc bác sĩ THẤY trên người bệnh.
+   Không ghi đường lây, thói quen, cách phòng bệnh.
+   ĐÚNG: TC|sốt cao, TC|đau vùng thượng vị
    SAI:  TC|Nhai hoặc mút đồ vật, TC|Sử dụng miệng lưỡi cắn
 5. Mọi mục phải liên quan TRỰC TIẾP tới chẩn đoán đã cho.
-6. Viết ngắn gọn 1-5 từ, như cách bác sĩ ghi bệnh án.
-7. Không giải thích, không đánh số, không thêm chữ nào ngoài các dòng MÃ|nội dung.
+6. Mỗi mục 1-5 từ, viết như bác sĩ ghi bệnh án.
+7. KHÔNG chú thích tên nước ngoài trong ngoặc.
+   SAI: TC|sợ nước (hydrophobia)
+8. Viết xong 11 dòng thì DỪNG. Không giải thích, không hỏi lại, không thêm gì.
 
 VÍ DỤ — chẩn đoán "Viêm dạ dày":
 TC|đau vùng thượng vị
@@ -63,57 +69,37 @@ TX|công thức máu
 
 BÂY GIỜ LÀM VỚI CHẨN ĐOÁN: "Bệnh dại"
 
-Chỉ viết bằng tiếng Việt. Tuyệt đối không dùng tiếng Trung, tiếng Anh hay bất kỳ ngôn ngữ nào khác.
+Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không chú thích trong ngoặc.
 ```
-
-**Kiểm khi chạy xong:** đúng 11 dòng · không có động từ đầu dòng · không có `Phương pháp/Quan sát/Chẩn đoán lâm sàng` · không có chữ tiếng Anh · mọi mục liên quan bệnh dại.
-
-*(Code sẽ đối chiếu tiếp với RxNorm / `kb/xetnghiem_ten.txt`; mục nào không khớp KB thì loại — nên prompt không cần hoàn hảo, chỉ cần bớt rác.)*
 
 ---
 
-# PROMPT 2 — Đa dạng heading (ĐỔI HẲN CÁCH LÀM)
+# PROMPT 2 — ĐÃ BỎ, THAY BẰNG QUÉT DỮ LIỆU THẬT
 
-**Vì sao đổi:** yêu cầu LLM "sinh khung đa dạng" là sai từ gốc. Mỗi lần gọi là một phiên độc lập, nó không nhớ lần trước, và khi bị bảo "hãy đa dạng" thì nó mode-collapse ra vài mẫu quen.
-
-**Cách đúng:** LLM chỉ lo **TỪ VỰNG** (tên mục — việc nó giỏi). **CODE lo CẤU TRÚC** (đánh số, bullet, thụt lề, thứ tự — việc code làm hoàn hảo).
-
-### 2A — Prompt xin từ vựng (chạy 1 lần cho mỗi nhóm mục)
+Prompt 2A hỏng nặng và **không cần sửa** — vì đã quét được heading thật từ chính 100 file đề thi:
 
 ```
-Bạn là bác sĩ Việt Nam. Trong bệnh án và phiếu khám, một mục có thể được đặt
-tên theo nhiều cách khác nhau tuỳ bệnh viện và tuỳ bác sĩ.
-
-Hãy liệt kê 25 cách đặt tên khác nhau cho mục ghi: CÁC TRIỆU CHỨNG NGƯỜI BỆNH ĐANG CÓ
-
-Yêu cầu:
-- Mỗi dòng một cách gọi, không đánh số, không giải thích.
-- Chỉ ghi TÊN MỤC, không kèm dấu hai chấm, không kèm nội dung.
-- Đa dạng độ dài: có cách gọi ngắn 1-2 từ, có cách gọi dài 4-6 từ.
-- Dùng đúng từ ngữ bác sĩ Việt Nam hay dùng trong bệnh án thật.
-
-Chỉ viết bằng tiếng Việt. Tuyệt đối không dùng tiếng Trung, tiếng Anh hay bất kỳ ngôn ngữ nào khác.
+kb/heading_lamsang.txt   67 tên mục lâm sàng
+kb/heading_hoidap.txt     8 tên mục hỏi–đáp
 ```
 
-Chạy lại prompt trên, thay phần in hoa bằng từng nhóm:
+Đây là toàn bộ heading xuất hiện ≥2 lần trong đề thi (419 heading duy nhất, lọc còn 75 cái đáng tin). Vài cái đầu:
 
-| Nhóm | Thay vào chỗ in hoa |
-|---|---|
-| Triệu chứng | `CÁC TRIỆU CHỨNG NGƯỜI BỆNH ĐANG CÓ` |
-| Lý do khám | `LÝ DO NGƯỜI BỆNH ĐẾN KHÁM HOẶC NHẬP VIỆN` |
-| Diễn biến | `DIỄN BIẾN CỦA BỆNH THEO THỜI GIAN` |
-| Bệnh nền | `CÁC BỆNH MẠN TÍNH ĐÃ CÓ TỪ TRƯỚC` |
-| Kết quả XN | `KẾT QUẢ CÁC XÉT NGHIỆM ĐÃ LÀM` |
-| Thủ thuật | `CÁC THỦ THUẬT VÀ THĂM DÒ ĐÃ THỰC HIỆN` |
-| Thuốc | `CÁC THUỐC NGƯỜI BỆNH ĐANG DÙNG` |
-| Khám | `KẾT QUẢ THĂM KHÁM LÂM SÀNG` |
-| Hình ảnh | `KẾT QUẢ CHẨN ĐOÁN HÌNH ẢNH` |
+```
+Lý do nhập viện                  Tiền sử bệnh hiện tại
+Đánh giá tại bệnh viện           Triệu chứng hiện tại
+Đặc điểm triệu chứng             Thời điểm khởi phát triệu chứng
+Bệnh sử hiện tại                 Các sự kiện trước khi nhập viện
+Diễn biến bệnh                   Các bệnh lý mạn tính
+Thuốc trước khi nhập viện        Các thủ thuật đã thực hiện
+Cận lâm sàng                     Kết quả xét nghiệm
+Kết quả chẩn đoán hình ảnh       Dấu hiệu lâm sàng
+Tiền sử phẫu thuật / thủ thuật   Các phát hiện chẩn đoán khác
+```
 
-→ 9 nhóm × 25 = **~225 tên mục**, gấp nhiều lần danh sách cứng cũ.
+**Tốt hơn LLM ở mọi mặt:** có thật, đúng phân bố đề thi, không lộ tiếng Trung, không trôi đề, và **miễn phí**.
 
-### 2B — Cấu trúc do CODE sinh (không dùng LLM)
-
-Đây là chỗ tạo ra đa dạng thật. Code random độc lập từng tham số:
+### Đa dạng cấu trúc do CODE sinh
 
 ```python
 NUMBERING = [None, '1.', '1)', 'I.', 'A.', 'Mục 1:', '1 -', '(1)']
@@ -122,93 +108,41 @@ INDENT    = ['', '  ', '    ', '      ', '\t']
 COLON     = [':', '', ' :', ' -', '...']
 BLANKS    = [0, 1, 2]
 CASE      = [str, str.upper, str.title]
-LAYOUT    = ['bullet', 'inline', 'numbered']   # inline: "Triệu chứng: sốt, ho, đau đầu"
+LAYOUT    = ['bullet', 'inline', 'numbered']
 ```
 
-Ví dụ vài khung code sinh ra từ CÙNG bộ tham số ngẫu nhiên:
-
-```
-1. TRIỆU CHỨNG HIỆN TẠI
-      - {SLOT}
-      - {SLOT}
-
-2. THUỐC ĐANG DÙNG
-      - {SLOT}
-```
-```
-I.  Lý do vào viện ...
-	‣ {SLOT}
-	‣ {SLOT}
-II.  Các bệnh mạn tính ...
-	‣ {SLOT}
-```
-```
-Dấu hiệu lâm sàng: {SLOT}, {SLOT}, {SLOT}
-Kết quả xét nghiệm đã làm: {SLOT}, {SLOT}
-```
-```
-Mục 1: Diễn biến bệnh
-  a) {SLOT}
-  b) {SLOT}
-Mục 2: Thăm dò đã thực hiện
-  a) {SLOT}
-```
-
-Số tổ hợp: `8 × 10 × 5 × 5 × 3 × 3 × 3 ≈ 54.000` khung, chưa tính hoán vị thứ tự mục và 225 tên mục. **Không LLM nào sinh nổi mức đa dạng này** — nhưng code thì làm trong 3 dòng.
+`8 × 10 × 5 × 5 × 3 × 3 × 3 ≈ 54.000` khung × 67 tên mục × hoán vị thứ tự. LLM không sinh nổi mức này — nhưng đây đúng là thứ code làm tốt nhất, và cũng là chỗ bạn kêu "chẳng đa dạng gì".
 
 ---
 
-# PROMPT 3 — Văn xuôi (VIẾT LẠI HOÀN TOÀN)
+# PROMPT 3 — Văn xuôi (sửa 3 lỗi, giữ nguyên bố cục vì đã đúng)
 
-**Ba lỗi đã sửa:**
-1. ~~"hỏi–đáp giữa bệnh nhân và bác sĩ"~~ → **0/100 file đề thi là đối thoại**. Format thật: *một câu hỏi* + *một bài trả lời dài có mục*.
-2. Ép độ dài bằng câu chữ vô dụng → **độ dài phải đến từ NỘI DUNG**: đưa nhiều thực thể hơn (12–15 thay vì 4) và **cho sẵn dàn ý các mục**.
-3. Chống lặp lời sáo rỗng bằng cấm cụ thể.
+**Sửa:** bỏ hết dấu ngoặc vuông (bị copy nguyên) · cấm ngôn ngữ ở đầu+cuối · cấm chú thích ngoặc.
 
 ```
-Bạn là biên tập viên chuyên mục tư vấn sức khoẻ của một trang web y tế Việt Nam.
-Hãy viết MỘT BÀI tư vấn hoàn chỉnh theo đúng bố cục dưới đây.
+CHỈ VIẾT BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
 
-BỐ CỤC BẮT BUỘC (giữ nguyên 2 dòng tiêu đề này):
+Bạn là biên tập viên chuyên mục tư vấn sức khoẻ của một trang web y tế Việt Nam.
+Viết MỘT BÀI tư vấn hoàn chỉnh.
+
+BỐ CỤC — giữ nguyên hai dòng tiêu đề, viết nội dung thật vào chỗ mô tả:
 
 Câu hỏi từ người dùng:
-[Người bệnh tự kể bằng lời thường ngày: hoàn cảnh, thấy khó chịu thế nào, lo lắng
- gì, rồi đặt câu hỏi. Viết liền mạch 4-6 câu. KHÔNG xuống dòng nhiều lần.]
+Người bệnh tự kể bằng lời thường ngày gồm: hoàn cảnh xảy ra, thấy khó chịu
+thế nào, lo lắng gì, rồi đặt câu hỏi. Viết liền mạch 4 đến 6 câu.
 
 Câu trả lời của bác sĩ:
 Chào bạn,
-[Sau đó viết bài trả lời gồm ĐÚNG 4 mục, mỗi mục có tiêu đề đánh số riêng:]
-1. [Bệnh này là gì] — giải thích bản chất bệnh, 4-6 câu.
-2. [Vì sao mắc / lây thế nào] — nguyên nhân, yếu tố nguy cơ, 4-6 câu.
-3. [Cần làm xét nghiệm gì] — nêu các thăm dò cần thiết và ý nghĩa, 4-6 câu.
-4. [Điều trị và theo dõi] — hướng xử trí, thuốc, dặn dò, 4-6 câu.
-Trân trọng!
+Rồi viết đúng 4 mục, mỗi mục bắt đầu bằng số thứ tự và một tiêu đề ngắn do
+bạn tự đặt, sau đó là 4 đến 6 câu văn:
+Mục 1 nói về bản chất của bệnh này là gì.
+Mục 2 nói về nguyên nhân và cách mắc bệnh.
+Mục 3 nói về các xét nghiệm cần làm và ý nghĩa của chúng.
+Mục 4 nói về cách điều trị, thuốc dùng và dặn dò theo dõi.
+Kết thúc bằng dòng: Trân trọng!
 
 CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN TRONG BÀI, không sửa một chữ,
-mỗi cụm dùng ĐÚNG MỘT LẦN:
-- {entity_1}
-- {entity_2}
-- {entity_3}
-...
-- {entity_15}
-
-QUY TẮC:
-- Tổng bài 500-700 từ. Mục nào cũng phải đủ 4-6 câu, không được viết cụt.
-- Mỗi câu phải mang MỘT THÔNG TIN Y KHOA MỚI.
-- CẤM lặp lại ý đã nói ở câu trước dưới cách diễn đạt khác.
-- CẤM các câu trấn an rỗng kiểu "đừng lo lắng", "hãy đến khám ngay",
-  "bác sĩ sẽ giúp bạn" nếu không kèm thông tin y khoa cụ thể.
-- CẤM viết dưới dạng đối thoại qua lại. Người bệnh chỉ hỏi MỘT lần ở đầu bài.
-- Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
-
-Chỉ viết bằng tiếng Việt. Tuyệt đối không dùng tiếng Trung, tiếng Anh hay bất kỳ ngôn ngữ nào khác.
-```
-
-### Ví dụ điền sẵn để test ngay trên Ollama
-
-Thay khối `{entity_*}` bằng danh sách này (bệnh dại, 15 cụm):
-
-```
+mỗi cụm dùng đúng một lần. Phải dùng HẾT, không bỏ sót cụm nào:
 - Bệnh dại
 - sợ nước
 - co thắt hầu họng
@@ -224,68 +158,103 @@ Thay khối `{entity_*}` bằng danh sách này (bệnh dại, 15 cụm):
 - công thức máu
 - chụp cộng hưởng từ sọ não
 - viêm não
+
+QUY TẮC:
+- Tổng bài 500 đến 700 từ. Mục nào cũng đủ 4 đến 6 câu, không viết cụt.
+- Mỗi câu mang một thông tin y khoa mới.
+- Cấm lặp lại ý đã nói dưới cách diễn đạt khác.
+- Cấm câu trấn an rỗng như "đừng lo lắng", "hãy đến khám ngay",
+  "bác sĩ sẽ giúp bạn" nếu không kèm thông tin y khoa cụ thể.
+- Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
+- Cấm chú thích tên bệnh bằng tiếng nước ngoài trong ngoặc.
+  Viết "Bệnh dại", KHÔNG viết "Bệnh dại (rabies)" hay "Bệnh dại (狂犬病)".
+- Cấm dùng từ tiếng Anh. Viết "chó cắn", không viết "dog bite".
+  Viết "vi rút dại", không viết "vi rút rabies".
+- Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
+- Không chép lại các dòng hướng dẫn ở trên vào bài viết.
+
+Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không chú thích trong ngoặc.
 ```
 
-**Kiểm khi chạy xong:**
+**Kiểm sau khi chạy:**
 
 | Tiêu chí | Đạt khi |
 |---|---|
 | Độ dài | 1.500–4.000 ký tự |
-| Bố cục | Có đủ 2 dòng tiêu đề + 4 mục đánh số |
-| Không đối thoại | Chỉ 1 lượt hỏi ở đầu |
-| Đủ cụm | Cả 15 cụm xuất hiện **nguyên văn**, mỗi cụm đúng 1 lần |
-| Không lặp | Không có câu trấn an rỗng lặp đi lặp lại |
-| Ngôn ngữ | Không lẫn tiếng Trung/Anh |
+| Bố cục | Đủ 2 dòng tiêu đề + 4 mục đánh số + `Trân trọng!` |
+| Không lộ hướng dẫn | Không thấy chữ `Mục 1 nói về...` trong bài |
+| Đủ cụm | **15/15** cụm xuất hiện nguyên văn *(vòng 1 chỉ đạt 10/15)* |
+| Ngôn ngữ | Không có chữ Hán, không có từ tiếng Anh |
 
-Nếu vẫn ngắn: **tăng số cụm lên 18–20** trước khi nghĩ tới việc sửa câu chữ về độ dài — vì độ dài đến từ lượng nội dung phải nói, không đến từ việc ra lệnh viết dài.
+Nếu vẫn thiếu cụm: **giảm còn 12 cụm** thay vì ép. Thiếu cụm thì code loại mẫu và sinh lại, không phải lỗi chết người.
 
 ---
 
-# PROMPT 4 — Sinh kho ÂM (mới, chưa có ở bản trước)
+# PROMPT 4 — Kho ÂM (thêm few-shot, hạ số lượng)
 
-Dùng để lấy các cụm **giống thực thể nhưng KHÔNG phải**, chèn vào text làm đối chứng âm.
+**Sửa:** vòng 1 ra động từ trần (`tiến hành`, `thay đổi`) — không ai nhầm mấy cái đó là thực thể nên vô dụng làm ca âm. Cần **cụm danh từ nhìn giống thực thể**.
 
 ```
-Bạn là bác sĩ Việt Nam. Trong bệnh án có nhiều cụm từ TRÔNG GIỐNG tên bệnh,
-tên thuốc hay tên xét nghiệm, nhưng thực chất KHÔNG PHẢI.
+CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
 
-Hãy liệt kê 20 cụm từ thuộc nhóm: CÁC HÀNH ĐỘNG Y TẾ CỦA NHÂN VIÊN Y TẾ
-(ví dụ: khám lâm sàng, theo dõi sát, chuyển tuyến trên)
+Trong bệnh án tiếng Việt có nhiều cụm từ TRÔNG GIỐNG tên bệnh, tên thuốc hoặc
+tên xét nghiệm, nhưng thực chất KHÔNG PHẢI. Tôi cần thu thập các cụm đó.
 
-Yêu cầu:
+Hãy liệt kê 15 cụm thuộc nhóm: CÁC VẬT DỤNG VÀ HOÁ CHẤT KHÔNG DÙNG ĐỂ CHỮA BỆNH
+
+VÍ DỤ đúng cho nhóm này:
+thuốc lá
+thuốc trừ sâu
+băng phiến
+long não
+thuốc nhuộm tóc
+
+YÊU CẦU:
 - Mỗi dòng một cụm, không đánh số, không giải thích.
-- Đây phải là HÀNH ĐỘNG, không phải tên bệnh / tên thuốc / tên xét nghiệm.
-- Ngắn 2-5 từ, đúng cách nói trong bệnh án Việt Nam.
+- Phải là CỤM DANH TỪ, 1 đến 4 từ. Không phải động từ.
+  ĐÚNG: băng phiến, thuốc trừ sâu
+  SAI:  tiến hành, thay đổi, điều chỉnh
+- Phải là thứ dễ bị nhầm là thuốc hoặc bệnh, nhưng thật ra không phải.
+- Viết đúng chính tả tiếng Việt có dấu.
+- Liệt kê xong 15 dòng thì DỪNG, không viết thêm gì.
 
-Chỉ viết bằng tiếng Việt. Tuyệt đối không dùng tiếng Trung, tiếng Anh hay bất kỳ ngôn ngữ nào khác.
+Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh.
 ```
 
-Chạy lại, thay phần in hoa bằng từng nhóm:
+Chạy lại prompt trên, thay phần in hoa **và cả 5 dòng ví dụ** theo bảng:
 
-| # | Thay vào chỗ in hoa | Ví dụ mồi |
+| # | Thay chỗ in hoa | Thay 5 dòng ví dụ |
 |---|---|---|
-| 1 | `CÁC HÀNH ĐỘNG Y TẾ CỦA NHÂN VIÊN Y TẾ` | khám lâm sàng, chuyển tuyến |
-| 2 | `TÊN CÁC KHOA PHÒNG TRONG BỆNH VIỆN` | khoa nội tổng hợp, phòng khám da liễu |
-| 3 | `CÁC VẬT DỤNG VÀ HOÁ CHẤT KHÔNG PHẢI THUỐC CHỮA BỆNH` | băng phiến, long não, thuốc trừ sâu |
-| 4 | `CÁC CỤM MÔ TẢ CƠ THỂ HOẠT ĐỘNG BÌNH THƯỜNG` | ăn ngủ bình thường, đại tiện bình thường |
-| 5 | `CÁC THÓI QUEN VÀ YẾU TỐ NGUY CƠ` | hút thuốc lá, uống rượu bia, ăn mặn |
-| 6 | `CÁC CỤM CHỈ THỜI GIAN VÀ THÔNG TIN HÀNH CHÍNH` | cách đây 3 ngày, giường số 5 |
-| 7 | `CÁC THỦ THUẬT ĐIỀU TRỊ (không phải để chẩn đoán)` | truyền dịch, thở oxy, ghép thận |
+| 1 | `CÁC VẬT DỤNG VÀ HOÁ CHẤT KHÔNG DÙNG ĐỂ CHỮA BỆNH` | thuốc lá / thuốc trừ sâu / băng phiến / long não / thuốc nhuộm tóc |
+| 2 | `TÊN CÁC KHOA PHÒNG TRONG BỆNH VIỆN` | khoa nội tổng hợp / phòng khám da liễu / khoa cấp cứu / phòng mổ / khoa truyền nhiễm |
+| 3 | `CÁC CỤM MÔ TẢ CƠ THỂ HOẠT ĐỘNG BÌNH THƯỜNG` | ăn ngủ bình thường / đại tiện bình thường / kinh nguyệt đều / da niêm hồng / tinh thần tỉnh táo |
+| 4 | `CÁC THÓI QUEN VÀ YẾU TỐ NGUY CƠ` | hút thuốc lá / uống rượu bia / ăn mặn / ít vận động / thức khuya |
+| 5 | `CÁC CỤM CHỈ THỜI GIAN VÀ THÔNG TIN HÀNH CHÍNH` | cách đây ba ngày / giường số năm / khoa phòng điều trị / số hồ sơ / ngày ra viện |
+| 6 | `CÁC THỦ THUẬT ĐIỀU TRỊ, KHÔNG PHẢI ĐỂ CHẨN ĐOÁN` | truyền dịch / thở oxy / ghép thận / phẫu thuật cắt ruột thừa / xạ trị |
 
-⚠️ Nhóm 3 quan trọng nhất — `băng phiến`, `chăn màn` **đã bị model gán nhầm THUỐC ở bài nộp thật**.
+**Nhóm 1 quan trọng nhất** — `băng phiến`, `chăn màn` đã bị model gán nhầm THUỐC ở bài nộp thật.
 
-⚠️ Kho ÂM **phải được loại khỏi kho DƯƠNG** trước khi chạy bước quét từ điển ngược, nếu không chính bước chống-bỏ-sót sẽ tự gán nhãn cho các ca âm này.
+⚠️ Kho ÂM **phải loại khỏi kho DƯƠNG** trước khi chạy quét từ điển ngược, nếu không chính bước chống-bỏ-sót sẽ tự gán nhãn cho các ca âm này.
 
 ---
 
-# Thứ tự test đề nghị
+# Xử lý lỗi Ollama tự bịa lượt hội thoại
+
+Vòng 1 có đoạn `user Xin lỗi, có vẻ như có sự hiểu lầm...` — model tự sinh lượt của người dùng rồi tự trả lời. Đây là lỗi **stop token** của Ollama, không phải lỗi nội dung.
+
+Cách xử lý:
+- Đã thêm câu `"Viết xong ... thì DỪNG"` vào cuối mỗi prompt
+- Khi chạy bằng code, đặt `stop=["user", "User", "\nuser", "assistant"]`
+- Nếu vẫn bị: cắt output tại dòng đầu tiên chứa `user` hoặc `assistant`
+
+---
+
+# Thứ tự test vòng 2
 
 | # | Prompt | Xem gì |
 |---|---|---|
-| 1 | Prompt 1 với `"Bệnh dại"` | Còn bịa thuốc / còn từ meta / còn tiếng Anh không |
-| 2 | Prompt 1 với `"Trứng cá"` | Các mục có còn lạc đề như `Đau vùng chậu` không |
-| 3 | Prompt 3 (15 cụm bệnh dại) | Có ra **bài viết** thay vì **đối thoại** không · độ dài |
-| 4 | Prompt 2A nhóm "Triệu chứng" | Có ra đủ 25 tên mục khác nhau không |
-| 5 | Prompt 4 nhóm 3 (vật dụng) | Có ra `băng phiến`, `long não` không |
-
-Gửi lại output, tôi chỉnh tiếp rồi mới viết code.
+| 1 | Prompt 1 — `"Bệnh dại"` | Đủ 11 dòng · không bịa thuốc · không từ meta · không tiếng Anh |
+| 2 | Prompt 1 — `"Trứng cá"` | Còn lạc đề như `Đau vùng chậu`, `Chụp X-quang ổ bụng` không |
+| 3 | Prompt 3 | Có còn lộ `[Bệnh này là gì]` không · đủ 15/15 cụm · không chữ Hán |
+| 4 | Prompt 4 nhóm 1 | Ra danh từ (`băng phiến`) hay động từ trần (`tiến hành`) |
+| 5 | — | **Bỏ qua Prompt 2**, đã có `kb/heading_lamsang.txt` |
