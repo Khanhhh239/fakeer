@@ -14,7 +14,7 @@ BỎ (thà bỏ sót còn hơn giữ một span không thật sự có trong vă
 
 import re
 from difflib import SequenceMatcher
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 FUZZY_MIN_RATIO = 0.85
 EDGE_STRIP = ' \t.,;:!?()[]{}"\'-–—•·*”“’‘'
@@ -132,11 +132,14 @@ SHORT_UNIT_WORDS = 15
 #     ('tụ máu ngoài màng cứng phải cấp tính' = 8 từ).
 # Kết quả trên chính dữ liệu V2: 10738 -> 6169 từ (1.11x ngân sách bài tốt),
 # vẫn giữ TÊN_XÉT_NGHIỆM gấp ~4 lần bài tốt (261 so với 67).
+# TRIỆU_CHỨNG lấy p99=6 chứ không p95=5: cụm triệu chứng hợp lệ thật sự dài
+# tới 6 từ ('đau bụng vùng hạ sườn phải'), và p95 cắt mất đúng những ca đó.
+# An toàn hơn V2 vì trần giờ không còn là "bỏ thẳng" mà là mốc để dò lõi KB.
 MAX_WORDS_BY_TYPE = {
     'THUỐC': 4,
     'TÊN_XÉT_NGHIỆM': 5,
     'KẾT_QUẢ_XÉT_NGHIỆM': 4,
-    'TRIỆU_CHỨNG': 5,
+    'TRIỆU_CHỨNG': 6,
     'CHẨN_ĐOÁN': 8,
 }
 MAX_WORDS_DEFAULT = 6
@@ -144,10 +147,11 @@ MAX_WORDS_DEFAULT = 6
 
 def _structural_gate(etype: str, text: str) -> bool:
     """Chặn cấu trúc BẤT KỂ LLM tự tin bao nhiêu — bài học từ V1: model có
-    thể rất tự tin mà vẫn sai (xem 65acb97). True = giữ, False = loại."""
+    thể rất tự tin mà vẫn sai (xem 65acb97). True = giữ, False = loại.
+
+    KHÔNG chặn theo độ dài ở đây — span quá dài được CẮT NGẮN bởi _trim_to_cap
+    chứ không bị bỏ (xem giải thích ở đó)."""
     t = text.strip()
-    if len(t.split()) > MAX_WORDS_BY_TYPE.get(etype, MAX_WORDS_DEFAULT):
-        return False                # span dài bất thường -> gần như chắc là cả câu
     if etype == 'TÊN_XÉT_NGHIỆM' and _NUM_ONLY.match(t):
         return False                # số thuần không thể là TÊN xét nghiệm
     if etype == 'KẾT_QUẢ_XÉT_NGHIỆM' and not re.search(r'\d', t) and not _QUAL_VALUE.match(t):
@@ -155,8 +159,65 @@ def _structural_gate(etype: str, text: str) -> bool:
     return True
 
 
+def _kb_norm(s: str) -> str:
+    import unicodedata as _ud
+    return ' '.join(_ud.normalize('NFC', s).lower().split())
+
+
+def _trim_to_cap(ent: Dict, kb_names: Optional[Set[str]] = None) -> Optional[Dict]:
+    """Rút span vượt trần về phần LÕI, thay vì bỏ hẳn. Không rút được -> bỏ.
+
+    VÌ SAO KHÔNG BỎ THẲNG — đo từ hai lần nộp cùng pipeline khác độ dài
+    (WER 72.71 với 10738 từ, WER 69.66 với 6571 từ): trần độ dài đã loại
+    4167 từ, giải hệ WER cho thấy trong đó **~47% là từ KHỚP ĐÚNG gold**.
+    Bỏ hẳn span dài là vứt luôn gần nửa nội dung đúng -> thành deletion, mà
+    phân rã WER cho thấy deletion đang áp đảo insertion 2-6 lần.
+
+    VÌ SAO KHÔNG CẮT THEO VỊ TRÍ (lấy N từ đầu / N từ cuối) — đã thử và SAI:
+    span dài của LLM thường mở đầu bằng động từ dẫn hoặc chủ ngữ, nên phần
+    đầu chính là phần rác còn lõi nằm ở giữa:
+        'Chụp kiểm tra ghi nhận tụ máu ngoài màng cứng phải cấp tính'
+             ^--- 4 từ đầu là rác            ^--- lõi thật ở đây
+        'bệnh nhân đau bụng vùng hạ sườn phải nhiều ngày nay'
+    Cắt 8 từ đầu ra 'Chụp kiểm tra ghi nhận tụ máu ngoài' — vừa sai vừa vẫn
+    mất lõi. Head-initial chỉ đúng TRONG cụm danh từ, không đúng cho cả câu.
+
+    CÁCH LÀM: quét mọi cụm con liên tiếp có độ dài <= trần, lấy cụm DÀI NHẤT
+    khớp một tên trong KB y khoa (ICD/RxNorm). Đây là tri thức y khoa thật,
+    không phải suy đoán vị trí. Không có KB hoặc không cụm nào khớp -> bỏ
+    span (thà mất còn hơn giữ một span sai gây insertion).
+
+    Cắt ở ranh giới TỪ và neo lại offset theo vị trí thật trong span gốc nên
+    bất biến text == src[start:end] không bị phá.
+    """
+    cap = MAX_WORDS_BY_TYPE.get(ent['type'], MAX_WORDS_DEFAULT)
+    spans = [(m.start(), m.end()) for m in re.finditer(r'\S+', ent['text'])]
+    if len(spans) <= cap:
+        return ent
+    if not kb_names:
+        return None
+    best = None
+    for n in range(min(cap, len(spans)), 0, -1):
+        for i in range(len(spans) - n + 1):
+            a, b = spans[i][0], spans[i + n - 1][1]
+            if _kb_norm(ent['text'][a:b]) in kb_names:
+                best = (a, b)
+                break
+        if best:
+            break
+    if not best:
+        return None
+    a, b = best
+    ent = dict(ent)
+    ent['text'] = ent['text'][a:b]
+    ent['end'] = ent['start'] + b
+    ent['start'] = ent['start'] + a
+    return ent
+
+
 def verify_unit_entities(raw_items: List[Tuple[str, str]], unit: Dict,
-                          code2type: Dict[str, str]) -> List[Dict]:
+                          code2type: Dict[str, str],
+                          kb_names: Optional[Set[str]] = None) -> List[Dict]:
     """
     Toàn bộ hàng rào K6 cho MỘT unit: lọc placeholder -> neo về văn bản gốc
     -> chặn cấu trúc theo loại -> chặn mật độ bất thường.
@@ -173,6 +234,15 @@ def verify_unit_entities(raw_items: List[Tuple[str, str]], unit: Dict,
         e['type'] = code2type.get(e.pop('code'), None)
     anchored = [e for e in anchored if e['type']]
     anchored = [e for e in anchored if _structural_gate(e['type'], e['text'])]
+    anchored = [t for t in (_trim_to_cap(e, kb_names) for e in anchored) if t]
+    # cắt xong có thể sinh trùng lặp (hai span dài khác nhau cùng rút về một
+    # lõi) -> khử trùng theo (start, end, type), giữ bản đầu tiên
+    _seen, _uniq = set(), []
+    for e in anchored:
+        k = (e['start'], e['end'], e['type'])
+        if k not in _seen:
+            _seen.add(k); _uniq.append(e)
+    anchored = _uniq
 
     if len(unit['text'].split()) < SHORT_UNIT_WORDS and len(anchored) > MAX_ENTITIES_PER_SHORT_UNIT:
         anchored.sort(key=lambda e: e['end'] - e['start'], reverse=True)
@@ -254,32 +324,55 @@ def test_span_anchor():
     long_sent = ('Chụp kiểm tra ghi nhận tụ máu ngoài màng cứng phải cấp tính '
                  'trên nền tổn thương mạn tính')
     unit5 = {'text': long_sent, 'start': 0, 'heading': 'Diễn biến bệnh', 'zone': 'clinical'}
+    # KHÔNG có KB -> không dò được lõi -> BỎ (an toàn, không đoán vị trí)
     ents5 = verify_unit_entities([('CD', long_sent)], unit5, {'CD': 'CHẨN_ĐOÁN'})
     ok5 = ents5 == []
-    print(f"  {'✓' if ok5 else '✗'} chặn cả câu {len(long_sent.split())} từ gán CHẨN_ĐOÁN -> giữ {len(ents5)}")
+    print(f"  {'✓' if ok5 else '✗'} câu {len(long_sent.split())} từ, không KB -> bỏ (giữ {len(ents5)})")
     failed += not ok5
 
-    # nhưng cụm LÕI trong chính câu đó vẫn phải qua được — tên bệnh tiếng Việt
-    # thật sự dài tới 8 từ, đây là lý do trần CHẨN_ĐOÁN lấy p99 chứ không p95
+    # CÓ KB -> dò đúng lõi nằm GIỮA câu, không phải phần đầu
+    kb = {_kb_norm('tụ máu ngoài màng cứng')}
+    ents5b = verify_unit_entities([('CD', long_sent)], unit5, {'CD': 'CHẨN_ĐOÁN'}, kb_names=kb)
+    ok5b = (len(ents5b) == 1 and ents5b[0]['text'] == 'tụ máu ngoài màng cứng'
+            and ents5b[0]['text'] == long_sent[ents5b[0]['start']:ents5b[0]['end']])
+    print(f"  {'✓' if ok5b else '✗'} có KB -> dò lõi giữa câu -> "
+          f"{ents5b[0]['text']!r}" if ents5b else "  ✗ có KB mà vẫn mất span")
+    failed += not ok5b
+
+    # span đúng trần thì giữ NGUYÊN VĂN, không đụng vào
     core = 'tụ máu ngoài màng cứng phải cấp tính'   # đúng 8 từ = trần CHẨN_ĐOÁN
     assert len(core.split()) == 8, 'test tự mâu thuẫn: lõi phải đúng 8 từ'
     ents6 = verify_unit_entities([('CD', core)], unit5, {'CD': 'CHẨN_ĐOÁN'})
     ok6 = len(ents6) == 1 and ents6[0]['text'] == core
-    print(f"  {'✓' if ok6 else '✗'} lõi {len(core.split())} từ vẫn qua -> {[e['text'] for e in ents6]}")
+    print(f"  {'✓' if ok6 else '✗'} span đúng trần giữ nguyên -> {[e['text'] for e in ents6]}")
     failed += not ok6
 
-    # trần RIÊNG theo loại: cùng một cụm, TÊN_XÉT_NGHIỆM (trần 5) cho qua
-    # nhưng KẾT_QUẢ_XÉT_NGHIỆM (trần 4) thì chặn
+    # trần RIÊNG theo loại: TÊN_XÉT_NGHIỆM trần 5 -> 6 từ bị cắt còn 5
     u7 = {'text': 'chụp CT sọ não toàn bộ có cản quang', 'start': 0,
           'heading': 'Các thủ thuật đã thực hiện', 'zone': 'clinical'}
     five = 'chụp CT sọ não toàn'          # 5 từ
     six = 'chụp CT sọ não toàn bộ'        # 6 từ
     assert len(five.split()) == 5 and len(six.split()) == 6, 'test tự mâu thuẫn'
     keep7 = verify_unit_entities([('TX', five)], u7, {'TX': 'TÊN_XÉT_NGHIỆM'})
-    drop7 = verify_unit_entities([('TX', six)], u7, {'TX': 'TÊN_XÉT_NGHIỆM'})
-    ok7 = len(keep7) == 1 and drop7 == []
-    print(f"  {'✓' if ok7 else '✗'} trần TÊN_XÉT_NGHIỆM=5 từ -> 5từ:{len(keep7)} 6từ:{len(drop7)}")
+    kb7 = {_kb_norm('chụp CT sọ não')}
+    trim7 = verify_unit_entities([('TX', six)], u7, {'TX': 'TÊN_XÉT_NGHIỆM'}, kb_names=kb7)
+    ok7 = (len(keep7) == 1 and keep7[0]['text'] == five
+           and len(trim7) == 1 and trim7[0]['text'] == 'chụp CT sọ não')
+    print(f"  {'✓' if ok7 else '✗'} trần TX=5 -> 5từ giữ nguyên, 6từ dò KB còn "
+          f"{trim7[0]['text']!r}" if keep7 and trim7 else "  ✗ trần TX lỗi")
     failed += not ok7
+
+    # bất biến sống còn: sau khi rút lõi, text vẫn phải là substring nguyên văn
+    # TẠI ĐÚNG OFFSET tuyệt đối — sai chỗ này thì bước xuất BTC hỏng toàn bộ
+    u8 = {'text': 'bệnh nhân đau bụng vùng hạ sườn phải nhiều ngày nay', 'start': 1000,
+          'heading': 'Triệu chứng hiện tại', 'zone': 'clinical'}
+    kb8 = {_kb_norm('đau bụng vùng hạ sườn phải')}
+    e8 = verify_unit_entities([('TC', u8['text'])], u8, {'TC': 'TRIỆU_CHỨNG'}, kb_names=kb8)
+    ok8 = (len(e8) == 1 and e8[0]['text'] == 'đau bụng vùng hạ sườn phải'
+           and e8[0]['text'] == u8['text'][e8[0]['start']-1000:e8[0]['end']-1000])
+    print(f"  {'✓' if ok8 else '✗'} rút lõi xong offset tuyệt đối vẫn khớp -> "
+          f"{e8[0]['text']!r} @ {e8[0]['start']}" if e8 else "  ✗ rút lõi xong mất span")
+    failed += not ok8
 
     print(f"\n{'='*60}")
     if failed:
