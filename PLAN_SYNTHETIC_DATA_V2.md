@@ -158,6 +158,23 @@ Nguyên nhân: RxNorm là từ điển Mỹ (không có nhóm thuốc chung ti�
 - Trượt KB nhưng khớp **khuôn hợp lệ** (`thuốc + <tính từ>`, `chụp|siêu âm|nội soi + <bộ phận>`) → vẫn nhận
 - Trượt KB **và** không khớp khuôn nào → mới loại
 
+
+### Hai khái niệm KHÁC NHAU, đừng nhầm
+
+> **NER (span + type) — chưa cần khớp KB.** **Linking (mã cụ thể) — BẮT BUỘC khớp KB/ICD/RxNorm.**
+
+`kháng sinh`, `siêu âm`, `nội soi` vẫn là thực thể ĐÚNG cho việc train NER — bỏ chúng khỏi data thì model không học được cách nhận diện, và **chính đề thi thật dùng liên tục** (`nội soi` 30 lần, `siêu âm` 26 lần, `AST` 18 lần, `G6PD` 22 lần trong 100 file). Loại chúng khỏi NER training data sẽ tái tạo đúng lỗi V1 đã trả giá đắt nhất (nội soi/siêu âm 0% recall vì luật đòi "số + đơn vị").
+
+Nhưng bạn hoàn toàn đúng ở tầng LINKING: khi cần trả về mã cụ thể (`candidates: ["308135"]`), nó **PHẢI khớp chính xác** RxNorm/ICD/`xetnghiem_ten.txt` — không có mã thì không thể bịa ra. Đây chính là việc trường `linkable` ở Mục 1 đã làm, giờ **áp dụng cho cả 3 loại**, không chỉ THUỐC:
+
+| Loại | `linkable=true` khi | `linkable=false` khi | Bước linking |
+|---|---|---|
+| `THUỐC` | khớp RxNorm (hoạt chất/biệt dược) | `kháng sinh`, `thuốc hạ sốt`, `thuốc nam` | true → tra mã; false → abstain |
+| `CHẨN_ĐOÁN` | khớp ICD-VN | mô tả chung không phải tên bệnh chuẩn | true → tra mã; false → abstain |
+| `TÊN_XÉT_NGHIỆM` | khớp `xetnghiem_ten.txt` (tên chuẩn hoặc khớp khuôn `chụp/siêu âm/nội soi + bộ phận`) | mô tả mơ hồ không định danh được xét nghiệm cụ thể | true → tra mã; false → abstain |
+
+Tóm gọn: **KB kiểm soát bước LINKING (chưa làm), không kiểm soát bước NER (đang làm)**. Yêu cầu "xét nghiệm phải đúng KB, bệnh phải đúng ICD, thuốc đúng RxNorm" của bạn là đúng và đã có chỗ áp dụng — chỉ là áp dụng SAU, không áp dụng lúc lọc dữ liệu train NER.
+
 Chốt chặn ảo giác thực sự nằm ở chỗ khác: LLM **không gán nhãn**, và mọi span đều phải **neo được vào văn bản gốc**.
 
 ---

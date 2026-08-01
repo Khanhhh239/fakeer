@@ -98,7 +98,9 @@ LAYOUT    = ['bullet', 'inline', 'numbered']
 **Sửa chính:** thay vì mô tả từng mục (bị biến thành tiêu đề), **cho sẵn 4 tiêu đề mẫu** và **chỉ rõ mẫu SAI**.
 
 ```
-CHỈ VIẾT BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
+VIẾT BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc. Được phép dùng thuật ngữ
+y khoa chuẩn viết bằng chữ La-tinh (xem quy tắc bên dưới), không được dịch hay
+chú thích bằng tiếng Anh thường.
 
 Bạn là biên tập viên chuyên mục tư vấn sức khoẻ của một trang web y tế Việt Nam.
 Viết MỘT BÀI tư vấn hoàn chỉnh.
@@ -149,15 +151,23 @@ QUY TẮC:
 - Cấm câu trấn an rỗng như "đừng lo lắng", "hãy đến khám ngay" nếu không
   kèm thông tin y khoa cụ thể.
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
-- Cấm chú thích tên bệnh bằng tiếng nước ngoài trong ngoặc.
-  Viết "Bệnh dại", KHÔNG viết "Bệnh dại (rabies)" hay "Bệnh dại (狂犬病)".
-- Cấm MỌI từ tiếng Anh, kể cả tên khoa học của bệnh hay triệu chứng.
-  Viết "chó cắn" không viết "dog bite". Viết "vi rút dại" không viết "vi rút rabies".
-  Viết "sợ nước" không viết "sợ nước (hydrophobia)".
-  Nếu định viết tên tiếng Anh của bất kỳ bệnh hay triệu chứng nào, hãy BỎ nó đi.
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
 
-Nhắc lại: chỉ tiếng Việt. Không chữ Hán. Không tiếng Anh. Không ngoặc vuông.
+QUY TẮC NGÔN NGỮ — PHÂN BIỆT RÕ:
+ĐƯỢC PHÉP dùng thuật ngữ y khoa chuẩn bằng chữ La-tinh/viết tắt quốc tế,
+vì bác sĩ Việt Nam viết như vậy trong bệnh án thật:
+  Tên thuốc theo tên chung quốc tế: omeprazole, amoxicillin, furosemid.
+  Viết tắt xét nghiệm: CRP, AST, ALT, HbA1c, WBC, SPO2, G6PD, CT, MRI, PT-INR.
+  ĐÂY KHÔNG PHẢI tiếng Anh, đây là cách viết chuẩn của ngành y.
+CẤM dịch hoặc chú thích tên bệnh/triệu chứng tiếng Việt sang tiếng Anh thường:
+  ĐÚNG: "Bệnh dại", "sợ nước", "chó cắn"
+  SAI:  "Bệnh dại (rabies)", "sợ nước (hydrophobia)", "dog bite"
+Nói cách khác: tên THUỐC và tên/viết tắt XÉT NGHIỆM được giữ nguyên dạng
+quốc tế; còn TÊN BỆNH, CHẨN ĐOÁN, triệu chứng thì LUÔN viết tiếng Việt,
+không chú thích tên nước ngoài đi kèm.
+
+Nhắc lại: viết tiếng Việt, thuốc/xét nghiệm được giữ tên quốc tế chuẩn,
+không dịch tên bệnh/triệu chứng sang tiếng Anh, không chữ Hán, không ngoặc vuông.
 ```
 
 > **Đã bỏ 2 cụm** `kích thích` và `kháng sinh` khỏi danh sách (còn 13). Lý do ở mục dưới.
