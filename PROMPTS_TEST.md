@@ -144,6 +144,13 @@ CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN trong bài, không sửa một 
 - công thức máu
 - chụp cộng hưởng từ sọ não
 - viêm não
+- {bait_thuoc}
+- {bait_xetnghiem}
+
+**BẮT BUỘC:** 2 dòng cuối (`{bait_thuoc}`, `{bait_xetnghiem}`) đưa vào bài
+NHƯ MỌI CỤM KHÁC ở trên — tự nhiên, không giải thích, không đánh dấu là lạ.
+Nhưng chúng KHÔNG phải thuốc và KHÔNG phải xét nghiệm thật, chỉ nhắc qua,
+không dùng làm phần điều trị/chỉ định chính của bài.
 
 QUY TẮC:
 - Tổng bài 500 đến 700 từ. Mục nào cũng đủ 4 đến 6 câu.
@@ -153,18 +160,13 @@ QUY TẮC:
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
 
-MÔ PHỎNG LỖI GÕ CỦA BỆNH ÁN THẬT — làm đúng 4 việc sau:
-1. Dính liền 1 đến 2 chỗ: bỏ dấu cách giữa hai từ, ví dụ viết "bệnh dạithường"
-   thay vì "bệnh dại thường", hoặc "chẩn đoán.Bệnh nhân" thay vì có dấu cách.
-2. Che 1 đến 2 chỗ bằng dấu sao, ví dụ "Kháng sinh nhóm ***" hoặc
-   "đã dùng **** trước đó", giống chỗ bị mờ trong bệnh án chụp lại.
-3. Nhắc tới đúng MỘT lần cụm này, coi như thứ người bệnh hỏi thêm hoặc
-   thứ cần phân biệt, KHÔNG phải thuốc điều trị: {bait_thuoc}
-4. Nhắc tới đúng MỘT lần cụm này, coi như thủ thuật hay việc đã làm,
-   KHÔNG phải xét nghiệm: {bait_xetnghiem}
-
-TUYỆT ĐỐI KHÔNG được dính từ hay chèn dấu sao vào BÊN TRONG các cụm bắt buộc
-ở danh sách trên. Các cụm đó phải giữ nguyên vẹn từng chữ.
+MÔ PHỎNG LỖI GÕ CỦA BỆNH ÁN THẬT — làm đúng những việc sau:
+1. Dính liền {n_glue} chỗ: bỏ dấu cách giữa hai từ, ví dụ "bệnh dạithường".
+2. Chèn dấu sao {n_mask} chỗ, ví dụ "Kháng sinh nhóm ***", giống chỗ mờ
+   trong bệnh án chụp lại.
+Chỉ áp dụng ở phần văn xuôi bình thường, KHÔNG được đụng vào bất kỳ cụm nào
+trong danh sách "CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN" ở trên — kể cả 2
+dòng cuối của danh sách đó (xem ghi chú **BẮT BUỘC** ngay dưới danh sách).
 
 QUY TẮC NGÔN NGỮ — PHÂN BIỆT RÕ:
 ĐƯỢC PHÉP dùng thuật ngữ y khoa chuẩn bằng chữ La-tinh/viết tắt quốc tế,
@@ -187,41 +189,64 @@ không dịch tên bệnh/triệu chứng sang tiếng Anh, không chữ Hán, k
 
 ---
 
-## Ghép nhiễu — HAI TẦNG, không phải một
+## Nhiễu và mồi âm — CODE làm TRƯỚC khi gọi LLM, không phải chèn sau
 
-Nhiễu đến từ hai nguồn, cố ý tách bạch vì chúng mạnh ở hai chỗ khác nhau:
+**Sai lầm ở bản trước:** code dò "chỗ trống an toàn" rồi tự chèn câu khuôn
+(`"Người bệnh cũng hỏi về {}. "`) sau khi LLM đã viết xong — câu ghép
+ vào nghe giả, và hàm nhiễu dùng `rate` (tỷ lệ % ) thay vì số lần cụ thể nên
+ khó kiểm soát. **Sửa lại toàn bộ theo hướng này:**
 
-| Tầng | Ai làm | Được gì | Mất gì |
-|---|---|---|---|
-| **1. LLM sinh** (chỉ thị trong prompt) | Qwen | Nhiễu nằm **tự nhiên** trong mạch văn, mồi âm được đặt vào câu có nghĩa | **Không kiểm soát được** — có thể quên, có thể lỡ tay dính vào cụm bắt buộc |
-| **2. Code chèn** (`src/synth_noise.py`) | Code | **Đảm bảo tuyệt đối** offset đúng, tỷ lệ chính xác, không bao giờ chạm span | Máy móc hơn, câu chèn theo khuôn cố định |
-
-**Thứ tự bắt buộc: LLM trước → neo nhãn → code chèn sau.**
+### Thiết kế đúng
 
 ```python
-raw   = llm.generate(prompt_with_noise)        # tầng 1: Qwen tự nhiên
-ents  = anchor_all(raw, required)              # NEO NHÃN ở đây, trên text đã có nhiễu LLM
-if ents is None: retry()                       # LLM lỡ phá cụm bắt buộc -> sinh lại
-text, ents = inject_negative_bait(raw, ents, baits, n=2)   # tầng 2
-text, ents = inject_text_noise(text, ents, rate=0.03)
-validate(text, ents)                           # bất biến: text[a:b] == nhãn
+import random
+
+def make_prompt(entities, am_thuoc, am_xetnghiem):
+    n_glue = random.randint(1, 5)      # so cho dinh tu, CHI la 1 con so
+    n_mask = random.randint(1, 3)      # so cho chen ***
+    bait_thuoc  = random.choice(am_thuoc)      # CODE tu random, KHONG hardcode vi du
+    bait_xn     = random.choice(am_xetnghiem)
+
+    # bait duoc DUA VAO CHUNG danh sach cum bat buoc -- LLM da chung minh
+    # ty le tuan thu cao voi danh sach nay (13/13 o vong 3), nen dung LAI
+    # co che do thay vi bia them cau rieng
+    cum = entities + [bait_thuoc, bait_xn]
+
+    prompt = PROMPT3_TEMPLATE.format(
+        cum_list='\n'.join(f'- {c}' for c in cum),
+        n_glue=n_glue, n_mask=n_mask,
+        bait_thuoc=bait_thuoc, bait_xetnghiem=bait_xn)
+    return prompt, bait_thuoc, bait_xn
 ```
 
-**Vì sao neo nhãn Ở GIỮA, không phải cuối:** nếu neo sau khi code chèn nhiễu thì
-cụm bắt buộc có thể đã bị dính từ (`omeprazolemỗi`) và không tìm thấy nữa. Neo
-trước khi chèn thì code biết chính xác vùng nào cấm động vào.
+Sau khi LLM trả về text:
 
-**Vì sao LLM vẫn phải sinh nhiễu dù code làm được:** nhiễu của code chèn vào chỗ
-ngẫu nhiên nên đôi khi hơi vô lý; nhiễu của LLM nằm đúng chỗ người ta hay gõ sai.
-Trộn cả hai thì phân bố giống đề thi hơn. Nếu LLM quên thì code vẫn bù được — nên
-tầng 2 là lưới an toàn, không phải phần chính.
+```python
+raw = llm.generate(prompt)
+ents = anchor_all(raw, entities)          # CHI neo cac cum THAT, khong neo bait
+if ents is None:
+    retry()
+# bait KHONG can tim lai offset - no khong duoc gan nhan, chi can
+# no CO MAT trong van ban la du (kiem nhanh bang `in`, khong bat buoc)
+validate(raw, ents)
+```
 
-**Xử lý khi LLM lỡ phá cụm bắt buộc:** `anchor_all` trả `None` khi tìm được
-<60% số cụm → sinh lại tối đa 3 lần → vẫn hỏng thì bỏ ca đó. Không bao giờ
-"sửa gần đúng" vì sẽ tạo nhãn lệch.
+### Vì sao đây là cách đúng, không phải rắc rối thêm
 
----
+| | Bản cũ (code chèn sau) | Bản sửa (LLM dệt vào) |
+|---|---|---|
+| Câu văn | Câu khuôn bỏt vào, lộ liễu | LLM tự viết, liền mạch |
+| Số lần | `rate` % — khó dò ra bao nhiêu chỗ | `random.randint` — biết chính xác |
+| Bait | Code tự tìm chỗ trống để nhét | LLM đặt đúng chỗ có nghĩa |
+| Độ phức tạp code | 4 loại nhiễu + hàm tìm gap + FRAMES | 2 tham số số nguyên + 1 `random.choice` |
 
+`src/synth_noise.py` hiện tại (hàm `inject_text_noise`, `inject_negative_bait`)
+**KHÔNG khớp thiết kế này — phải viết lại**, bỏ cơ chế chèn-sau-khi-sinh,
+chuyển `n_glue`/`n_mask`/`bait_thuoc`/`bait_xetnghiem` thành tham số đưa
+**VÀO PROMPT** trước khi gọi LLM, không phải xử lý text sau khi LLM trả về.
+
+Hàm `anchor_all` (đã viết đúng ở `src/span_anchor.py`) **không đổi** — vẫn
+chỉ neo nhãn cho `entities` thật, không bao giờ neo `bait_thuoc`/`bait_xetnghiem`.
 ## Thiếu cụm thì sao — chính sách xử lý
 
 Đây là câu hỏi quan trọng nhất của vòng này. Trả lời: **thiếu cụm là chuyện BÌNH THƯỜNG, không cần ép đủ.**

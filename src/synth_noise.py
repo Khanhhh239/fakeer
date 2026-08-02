@@ -1,6 +1,11 @@
 """
 Sinh CA KHÓ cho dữ liệu huấn luyện: nhiễu văn bản + mồi âm.
 
+> **⚠️ OUTDATED — xem PROMPTS_TEST.md muc "Nhieu va moi am": phai VIET LAI theo
+> thiet ke prompt-time (n_glue/n_mask la so nguyen random, bait dua vao chung
+> danh sach cum bat buoc TRUOC khi goi LLM), khong dung co che chen-sau-khi-sinh
+> nhu file nay dang lam.**
+
 Bốn loại ca khó, theo yêu cầu:
   1. DÍNH TỪ      — mô phỏng lỗi gõ có thật trong đề thi (`bệnh dạithường`)
   2. CHÈN ***     — mô phỏng phần bị che/mất trong đề thi (`Kháng sinh nhóm ***`)
