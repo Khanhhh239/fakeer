@@ -474,7 +474,23 @@ def zip_output(base_dir: str, zip_path: str) -> None:
 # Process T2B outputs: anchor + validate + BATCH retry (khong retry tung item)
 # ---------------------------------------------------------------------------
 
-def _try_save_batch(texts: List[str], t2b_inputs: List[Tuple],
+def _clean_llm_output(text: str) -> str:
+    """
+    Lam sach output LLM truoc khi anchor:
+    1. Strip <think>...</think> tags (Qwen3 thinking tokens ro ra)
+    2. Strip markdown bold **...** -> giu noi dung
+    3. Strip markdown heading ## -> giu text
+    """
+    import re
+    # Boc think block (co the nhieu dong)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    # Strip ** bold (giu noi dung)
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    # Strip ## headings
+    text = re.sub(r'^#{1,4}\s+', '', text, flags=re.MULTILINE)
+    return text.strip()
+
+
                     kb: Dict, txt_dir: str, json_dir: str,
                     saved_start: int) -> Tuple[int, Dict, List[int]]:
     """
@@ -492,6 +508,7 @@ def _try_save_batch(texts: List[str], t2b_inputs: List[Tuple],
     failed_idx: List[int] = []
 
     for i, (text, (_, req, bait_t, bait_x)) in enumerate(zip(texts, t2b_inputs)):
+        text = _clean_llm_output(text)
         if not text:
             reject_counts["empty"] = reject_counts.get("empty", 0) + 1
             failed_idx.append(i)
@@ -539,7 +556,7 @@ def process_t2b_outputs(
     max_retry=2 (tong 3 round: round 0 + 2 retry).
     Returns (n_saved, reject_log).
     """
-    texts = [o.outputs[0].text.strip() for o in t2b_outs]
+    texts = [_clean_llm_output(o.outputs[0].text.strip()) for o in t2b_outs]
     total_saved = 0
     total_reject: Dict[str, int] = {}
     current_saved_start = saved_start
@@ -567,7 +584,7 @@ def process_t2b_outputs(
             failed_prompts,
             SamplingParams(temperature=temp, max_tokens=1100)
         )
-        texts = [o.outputs[0].text.strip() for o in retry_outs]
+        texts = [_clean_llm_output(o.outputs[0].text.strip()) for o in retry_outs]
         t2b_inputs = failed_inputs  # chi xu ly cac fail
 
     return total_saved, total_reject
