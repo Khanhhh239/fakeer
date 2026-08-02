@@ -491,6 +491,7 @@ def _clean_llm_output(text: str) -> str:
     return text.strip()
 
 
+def _try_save_batch(texts: List[str], t2b_inputs: List[Tuple],
                     kb: Dict, txt_dir: str, json_dir: str,
                     saved_start: int) -> Tuple[int, Dict, List[int]]:
     """
