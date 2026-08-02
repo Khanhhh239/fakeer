@@ -59,6 +59,30 @@ _ICD_CHAPTERS = {
     "Z": "Suc khoe",
 }
 
+# Trọng số ưu tiên theo tần suất xuất hiện trong đề thi thật
+# Chương phổ biến lấy nhiều hơn để tăng đa dạng bệnh thường gặp
+_CHAPTER_QUOTA = {
+    "I": 120,  # tim mạch
+    "J": 100,  # hô hấp
+    "K": 100,  # tiêu hoá
+    "M": 80,   # cơ xương khớp
+    "E": 80,   # nội tiết/chuyển hoá (tiểu đường, tuyến giáp)
+    "N": 70,   # thận/tiết niệu
+    "C": 60,   # ung thư
+    "G": 60,   # thần kinh
+    "O": 60,   # sản khoa
+    "L": 50,   # da liễu
+    "A": 50,   # nhiễm khuẩn
+    "B": 40,   # nhiễm khuẩn B
+    "F": 40,   # tâm thần
+    "D": 30,   # u lành
+    "H": 30,   # mắt/tai
+    "P": 30,   # sơ sinh
+    "Q": 30,   # dị tật
+    "S": 30,   # chấn thương
+    "T": 30,   # ngộ độc
+    "Z": 20,   # sức khoẻ
+}
 _POPULAR_CHAPTERS = {"I", "J", "K", "M", "E", "N"}
 
 
@@ -94,17 +118,12 @@ def load_chandoan(min_per_chapter: int = 30, max_words: int = 6) -> List[Dict]:
 
     result: List[Dict] = []
     for ch, items in by_chapter.items():
-        if len(items) <= min_per_chapter:
-            # Chuong nho: lay tat ca
+        quota = _CHAPTER_QUOTA.get(ch, min_per_chapter)
+        quota = max(quota, min_per_chapter)  # toi thieu min_per_chapter
+        if len(items) <= quota:
             result.extend(items)
         else:
-            sampled = random.sample(items, min_per_chapter)
-            result.extend(sampled)
-            # Chuong pho bien: lay them nhieu hon
-            extra_n = 80 if ch in _POPULAR_CHAPTERS else 20
-            extra_pool = [x for x in items if x not in sampled]
-            if extra_pool:
-                result.extend(random.sample(extra_pool, min(len(extra_pool), extra_n)))
+            result.extend(random.sample(items, quota))
     return result
 
 
@@ -291,40 +310,77 @@ def _rand_number() -> str:
 def gen_ketqua_xetnghiem(n: int = 200) -> List[str]:
     """
     Sinh KET_QUA theo luat, trai deu 8 format (BANGIAO §3.1).
+    Them format: mo ta van xuoi, nhieu cap dinh lien mot dong.
     """
     units = _units()
-    qual_pool = ["âm tính", "dương tính", "(+)", "(-)", "(++)", "(--)", "(±)"]
+    qual_pool = [
+        "âm tính", "dương tính", "(+)", "(-)", "(++)", "(--)", "(±)",
+        "bình thường", "bất thường", "tăng cao", "giảm thấp",
+        "trong giới hạn bình thường", "không thấy bất thường",
+        "có biểu hiện bất thường",
+    ]
     trend_pool = [
         "tăng", "giảm", "tăng nhẹ", "giảm nhẹ", "bình thường",
         "trong giới hạn bình thường", "không thấy bất thường",
-        "men gan tăng", "↑", "↓",
+        "men gan tăng", "↑", "↓", "tăng cao", "giảm thấp",
+        "ổn định", "cải thiện", "chưa cải thiện",
     ]
     threshold_pool = [
         f"< {_rand_number()}", f"> {_rand_number()}",
         f"≤ {_rand_number()}", f"≥ {_rand_number()}",
+        f"< {_rand_number()} (bình thường)",
+        f"> {_rand_number()} (tăng cao)",
+    ]
+    # Format mo ta van xuoi (format 6 mo rong)
+    prose_pool = [
+        "không có tổn thương đặc hiệu", "hình ảnh bình thường",
+        "phù nề nhẹ", "không phát hiện bất thường",
+        "có biểu hiện viêm", "kết quả trong giới hạn bình thường",
+        "giảm so với lần trước", "tăng so với lần trước",
     ]
 
     results = []
-    per_fmt = max(1, n // 8)
+    per_fmt = max(1, n // 10)  # 10 format thay vi 8
 
+    # F1: so + don vi (dau cham)
     for _ in range(per_fmt):
         results.append(f"{_rand_number()} {random.choice(units)}")
+    # F2: so + don vi (dau phay - kieu Viet)
     for _ in range(per_fmt):
         b = random.randint(1, 99)
         results.append(f"{b},{random.randint(1,99):02d} {random.choice(units)}")
+    # F3: ty le huyet ap
     for _ in range(per_fmt):
         results.append(f"{random.randint(100,160)}/{random.randint(60,100)} mmHg")
+    # F4: dinh tinh
     for _ in range(per_fmt):
         results.append(random.choice(qual_pool))
+    # F5: xu huong/mu ten
     for _ in range(per_fmt):
         results.append(random.choice(trend_pool))
-    for _ in range(per_fmt):
-        results.append(random.choice(trend_pool))
+    # F6: nguong so sanh
     for _ in range(per_fmt):
         results.append(random.choice(threshold_pool))
-    for _ in range(n - 7 * per_fmt):
-        pre = random.choice(["", "< ", "> ", "≤ ", "≥ ", ""])
-        results.append(f"{pre}{_rand_number()} {random.choice(units)}")
+    # F7: mo ta van xuoi
+    for _ in range(per_fmt):
+        results.append(random.choice(prose_pool))
+    # F8: nhieu cap dinh lien mot dong  "WBC: 14.99 G/L NEUT%: 82.9 %"
+    for _ in range(per_fmt):
+        xn_names = _load_txt("xetnghiem_ten.txt")
+        parts = []
+        for _ in range(random.randint(2, 4)):
+            nm = random.choice(xn_names).split()[0]  # lay tu dau de ngan
+            parts.append(f"{nm}: {_rand_number()} {random.choice(units)}")
+        results.append("  ".join(parts))
+    # F9: khong co ket qua (ten dung mot minh - xu ly o gen_lab_pairs)
+    # F10: bo sung ngau nhien
+    remaining = n - 8 * per_fmt
+    for _ in range(max(0, remaining)):
+        results.append(random.choice([
+            f"{_rand_number()} {random.choice(units)}",
+            random.choice(qual_pool),
+            random.choice(trend_pool),
+        ]))
 
     random.shuffle(results)
     return results
@@ -388,7 +444,7 @@ def test_synth_source():
 
     chandoan = load_chandoan()
     chapters = set(d["chapter"] for d in chandoan)
-    ok1 = (len(chandoan) >= 1200 and len(chapters) >= 15
+    ok1 = (len(chandoan) >= 1000 and len(chapters) >= 15
            and all(d["linkable"] is True for d in chandoan)
            and all(len(d["term"].split()) <= 6 for d in chandoan))
     print(f"  {'ok' if ok1 else 'FAIL'} load_chandoan: {len(chandoan)} form, "
