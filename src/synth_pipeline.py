@@ -471,8 +471,55 @@ def zip_output(base_dir: str, zip_path: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Process T2B outputs: anchor + validate + retry logic (S3)
+# Process T2B outputs: anchor + validate + BATCH retry (khong retry tung item)
 # ---------------------------------------------------------------------------
+
+def _try_save_batch(texts: List[str], t2b_inputs: List[Tuple],
+                    kb: Dict, txt_dir: str, json_dir: str,
+                    saved_start: int) -> Tuple[int, Dict, List[int]]:
+    """
+    Thu anchor+validate cho 1 lot texts.
+    Returns (n_saved, reject_counts, failed_indices).
+    failed_indices: cac index can retry.
+    """
+    from synth_anchor import anchor_all, validate_document
+
+    am_thuoc     = kb["am_thuoc"]
+    am_xetnghiem = kb["am_xetnghiem"]
+
+    saved = 0
+    reject_counts: Dict[str, int] = {}
+    failed_idx: List[int] = []
+
+    for i, (text, (_, req, bait_t, bait_x)) in enumerate(zip(texts, t2b_inputs)):
+        if not text:
+            reject_counts["empty"] = reject_counts.get("empty", 0) + 1
+            failed_idx.append(i)
+            continue
+
+        ents = anchor_all(text, req, bait=[bait_t, bait_x])
+        if ents is None:
+            reject_counts["anchor<60%"] = reject_counts.get("anchor<60%", 0) + 1
+            failed_idx.append(i)
+            continue
+
+        ok, reason = validate_document(
+            text, ents,
+            bait_thuoc=bait_t, bait_xetnghiem=bait_x,
+            am_thuoc=am_thuoc, am_xetnghiem=am_xetnghiem,
+        )
+        if not ok:
+            gate = reason.split("]")[0].lstrip("[")
+            reject_counts[gate] = reject_counts.get(gate, 0) + 1
+            failed_idx.append(i)
+            continue
+
+        text_noisy = apply_noise(text, ents)
+        save_pair(txt_dir, json_dir, saved_start + saved, text_noisy, ents)
+        saved += 1
+
+    return saved, reject_counts, failed_idx
+
 
 def process_t2b_outputs(
     t2b_outs,
@@ -484,80 +531,46 @@ def process_t2b_outputs(
     txt_dir: str,
     json_dir: str,
     saved_start: int = 1,
-    max_retry: int = 3,
+    max_retry: int = 2,
 ) -> Tuple[int, Dict]:
     """
-    Xu ly ket qua T2B: anchor -> validate -> retry neu truot (toi da 3 lan).
-    Luu file txt + json khi qua het cong.
+    Xu ly ket qua T2B bang BATCH retry -- khong goi LLM tung item.
+    Sau moi round: collect tat ca fail, generate lai ca lot mot lan.
+    max_retry=2 (tong 3 round: round 0 + 2 retry).
     Returns (n_saved, reject_log).
     """
-    from synth_anchor import anchor_all, validate_document
+    texts = [o.outputs[0].text.strip() for o in t2b_outs]
+    total_saved = 0
+    total_reject: Dict[str, int] = {}
+    current_saved_start = saved_start
 
-    saved = 0
-    reject_log: Dict[str, int] = {}
+    for attempt in range(max_retry + 1):
+        saved, reject_counts, failed_idx = _try_save_batch(
+            texts, t2b_inputs, kb, txt_dir, json_dir, current_saved_start
+        )
+        total_saved += saved
+        current_saved_start += saved
+        for k, v in reject_counts.items():
+            total_reject[k] = total_reject.get(k, 0) + v
 
-    TARGET_DIST = {
-        "TRIEU_CHUNG": 0.33, "CHAN_DOAN": 0.25, "THUOC": 0.16,
-        "TEN_XET_NGHIEM": 0.15, "KET_QUA_XET_NGHIEM": 0.11,
-    }
+        print(f"  Round {attempt}: luu {saved}, fail {len(failed_idx)}: {reject_counts}")
 
-    am_thuoc     = kb["am_thuoc"]
-    am_xetnghiem = kb["am_xetnghiem"]
+        if not failed_idx or attempt == max_retry:
+            break
 
-    for i, (out_obj, (_, req, bait_t, bait_x)) in enumerate(
-            zip(t2b_outs, t2b_inputs)):
+        # Batch retry: chi sinh lai cac item bi fail, nhiet do cao hon
+        failed_inputs = [t2b_inputs[i] for i in failed_idx]
+        failed_prompts = [inp[0] for inp in failed_inputs]
+        temp = 0.8 + attempt * 0.1
+        print(f"  Retry {attempt+1}: {len(failed_prompts)} bai, temp={temp:.1f} -- batch generate...")
+        retry_outs = llm.generate(
+            failed_prompts,
+            SamplingParams(temperature=temp, max_tokens=1100)
+        )
+        texts = [o.outputs[0].text.strip() for o in retry_outs]
+        t2b_inputs = failed_inputs  # chi xu ly cac fail
 
-        text = out_obj.outputs[0].text.strip()
-
-        # Retry loop (S3)
-        for attempt in range(max_retry):
-            if not text:
-                break
-
-            ents = anchor_all(text, req, bait=[bait_t, bait_x])
-            if ents is None:
-                if attempt < max_retry - 1:
-                    # Sinh lai mot minh cai nay
-                    prompt = t2b_inputs[i][0]
-                    retry_out = llm.generate(
-                        [prompt],
-                        SamplingParams(temperature=0.7 + attempt * 0.1,
-                                       max_tokens=1100)
-                    )
-                    text = retry_out[0].outputs[0].text.strip()
-                    continue
-                else:
-                    reject_log["anchor<60%"] = reject_log.get("anchor<60%", 0) + 1
-                    break
-
-            ok, reason = validate_document(
-                text, ents,
-                bait_thuoc=bait_t, bait_xetnghiem=bait_x,
-                am_thuoc=am_thuoc, am_xetnghiem=am_xetnghiem,
-            )
-            if not ok:
-                if attempt < max_retry - 1:
-                    prompt = t2b_inputs[i][0]
-                    retry_out = llm.generate(
-                        [prompt],
-                        SamplingParams(temperature=0.7 + attempt * 0.1,
-                                       max_tokens=1100)
-                    )
-                    text = retry_out[0].outputs[0].text.strip()
-                    continue
-                else:
-                    gate = reason.split("]")[0].lstrip("[")
-                    reject_log[gate] = reject_log.get(gate, 0) + 1
-                    break
-            else:
-                # Qua het cong -- ap noise len text truoc khi luu
-                text_noisy = apply_noise(text, ents)
-                save_pair(txt_dir, json_dir,
-                          saved_start + saved, text_noisy, ents)
-                saved += 1
-                break
-
-    return saved, reject_log
+    return total_saved, total_reject
 
 
 # ---------------------------------------------------------------------------
