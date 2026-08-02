@@ -550,17 +550,19 @@ def process_t2b_outputs(
     json_dir: str,
     saved_start: int = 1,
     max_retry: int = 2,
+    target: int = 0,          # neu > 0: tiep tuc sinh them cho den khi du
 ) -> Tuple[int, Dict]:
     """
-    Xu ly ket qua T2B bang BATCH retry -- khong goi LLM tung item.
-    Sau moi round: collect tat ca fail, generate lai ca lot mot lan.
-    max_retry=2 (tong 3 round: round 0 + 2 retry).
-    Returns (n_saved, reject_log).
+    Xu ly ket qua T2B bang BATCH retry.
+    Neu target > 0: sau khi het retry, neu van chua du target thi
+    sinh them bang cach resample tu scenarios, lap lai cho den du.
     """
     texts = [_clean_llm_output(o.outputs[0].text.strip()) for o in t2b_outs]
     total_saved = 0
     total_reject: Dict[str, int] = {}
     current_saved_start = saved_start
+    # Giu lai inputs goc de co the resample
+    original_inputs = list(t2b_inputs)
 
     for attempt in range(max_retry + 1):
         saved, reject_counts, failed_idx = _try_save_batch(
@@ -576,17 +578,21 @@ def process_t2b_outputs(
         if not failed_idx or attempt == max_retry:
             break
 
-        # Batch retry: chi sinh lai cac item bi fail, nhiet do cao hon
         failed_inputs = [t2b_inputs[i] for i in failed_idx]
         failed_prompts = [inp[0] for inp in failed_inputs]
         temp = 0.8 + attempt * 0.1
-        print(f"  Retry {attempt+1}: {len(failed_prompts)} bai, temp={temp:.1f} -- batch generate...")
+        print(f"  Retry {attempt+1}: {len(failed_prompts)} bai, temp={temp:.1f}...")
         retry_outs = llm.generate(
             failed_prompts,
             SamplingParams(temperature=temp, max_tokens=1100)
         )
         texts = [_clean_llm_output(o.outputs[0].text.strip()) for o in retry_outs]
-        t2b_inputs = failed_inputs  # chi xu ly cac fail
+        t2b_inputs = failed_inputs
+
+    # Neu van chua du target: bao cao thieu, khong resample (tranh trung lap benh)
+    if target > 0 and total_saved < target:
+        print(f"  WARNING: chi luu duoc {total_saved}/{target} file T2B.")
+        print(f"  Tang N_TARGET hoac giam reject rate bang cach chinh prompt.")
 
     return total_saved, total_reject
 
@@ -721,24 +727,46 @@ def process_mixed_blocks(
 # Sample diagnoses theo phan tang co trong so (S1 + BANGIAO §10)
 # ---------------------------------------------------------------------------
 
-def sample_diagnoses(chandoan_pool: List[Dict], n_per_chapter: int = 5) -> List[Dict]:
+def sample_diagnoses(chandoan_pool: List[Dict], n_needed: int) -> List[Dict]:
     """
-    Chon chan doan mau: moi chuong lay n_per_chapter,
-    chuong quan trong lay nhieu hon theo _CHAPTER_QUOTA.
-    Dam bao phan tang deu khi chay full 500 file.
+    Chon n_needed chan doan KHONG LAP tu pool, dam bao moi chuong co dai dien.
+    Neu n_needed > len(pool) thi lay het pool (khong the co nhieu hon).
+    Phan tang theo trong so chuong truoc, lay them ngau nhien neu chua du.
     """
     from collections import defaultdict
     from synth_source import _CHAPTER_QUOTA
+
     by_ch = defaultdict(list)
     for d in chandoan_pool:
         by_ch[d["chapter"]].append(d)
 
-    result = []
+    # Buoc 1: lay theo quota co trong so de dam bao dai dien
+    selected = []
+    selected_set = set()
+    total_quota = sum(_CHAPTER_QUOTA.get(ch, 30) for ch in by_ch)
+
     for ch, items in by_ch.items():
-        quota = _CHAPTER_QUOTA.get(ch, n_per_chapter)
-        # Scale xuong khi test nhanh (n_per_chapter nho)
-        n = max(1, int(quota * n_per_chapter / 5))
-        result.extend(random.sample(items, min(n, len(items))))
-    random.shuffle(result)
-    return result
+        quota = _CHAPTER_QUOTA.get(ch, 30)
+        # Scale theo ti le: chuong co trong so cao lay nhieu hon
+        n = max(1, int(n_needed * quota / total_quota))
+        take = random.sample(items, min(n, len(items)))
+        for d in take:
+            key = d["code"]
+            if key not in selected_set:
+                selected.append(d)
+                selected_set.add(key)
+
+    # Buoc 2: neu chua du, lay them tu phan con lai (ngau nhien, khong lap)
+    if len(selected) < n_needed:
+        remaining = [d for d in chandoan_pool if d["code"] not in selected_set]
+        random.shuffle(remaining)
+        for d in remaining:
+            if len(selected) >= n_needed:
+                break
+            selected.append(d)
+            selected_set.add(d["code"])
+
+    random.shuffle(selected)
+    n_actual = min(len(selected), n_needed)
+    return selected[:n_actual]
 
