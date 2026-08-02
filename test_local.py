@@ -135,6 +135,34 @@ def test_on_real_data():
     
     print("\n✓ Real data test PASSED!")
 
+
+def test_synth_source():
+    """T0 -- kho nguon tong hop (phan tang ICD, trich hoat chat, sinh KQ)"""
+    print("\n" + "="*60)
+    print("TEST SYNTH: Source (T0)")
+    print("="*60)
+    from synth_source import test_synth_source as _run
+    _run()
+
+
+def test_synth_anchor():
+    """anchor_all + validate_document (BANGIAO §4-§5)"""
+    print("\n" + "="*60)
+    print("TEST SYNTH: Anchor + Validate")
+    print("="*60)
+    from synth_anchor import test_synth_anchor as _run
+    _run()
+
+
+def test_synth_struct():
+    """T2A -- khoi cau truc bat bien offset (BANGIAO §3.3)"""
+    print("\n" + "="*60)
+    print("TEST SYNTH: Struct T2A")
+    print("="*60)
+    from synth_struct import test_synth_struct as _run
+    _run()
+
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -153,6 +181,9 @@ def run_all_tests():
         ("V2 Merge Entities (K7)", test_merge_entities_v2),
         ("V2 LLM Extract (K2)", test_llm_extract_v2),
         ("V2 Export BTC (K8)", test_export_btc_v2),
+        ("Synth Source (T0)", test_synth_source),
+        ("Synth Anchor+Validate", test_synth_anchor),
+        ("Synth Struct T2A", test_synth_struct),
     ]
     
     passed = 0
