@@ -607,6 +607,116 @@ def process_t2a_blocks(blocks, txt_dir: str, json_dir: str,
         saved += 1
     return saved
 
+
+# ---------------------------------------------------------------------------
+# Merge T2B + T2A thanh 1 file (60% file theo yeu cau)
+# Van ban: T2B truoc, xuong dong, T2A sau.
+# Offset T2A duoc cong them len(t2b_text) + separator.
+# ---------------------------------------------------------------------------
+
+def merge_and_save(
+    t2b_text: str, t2b_ents: List[Dict],
+    t2a_text: str, t2a_ents: List[Dict],
+    txt_dir: str, json_dir: str, idx: int,
+) -> bool:
+    """
+    Noi t2b_text + separator + t2a_text.
+    Shift offset cua t2a_ents theo do dai phan dau.
+    Kiem bat bien truoc khi luu.
+    Returns True neu luu thanh cong.
+    """
+    sep = "\n\n"
+    merged_text = t2b_text + sep + t2a_text
+    offset = len(t2b_text) + len(sep)
+
+    merged_ents = list(t2b_ents)
+    for e in t2a_ents:
+        new_e = {
+            "text": e["text"],
+            "type": e["type"],
+            "position": [e["position"][0] + offset, e["position"][1] + offset],
+        }
+        merged_ents.append(new_e)
+
+    # Kiem bat bien
+    for e in merged_ents:
+        s, en = e["position"][0], e["position"][1]
+        if merged_text[s:en] != e["text"]:
+            return False
+
+    # Kiem khong chong lan
+    merged_ents.sort(key=lambda x: x["position"][0])
+    for a, b in zip(merged_ents, merged_ents[1:]):
+        if a["position"][1] > b["position"][0]:
+            return False
+
+    # Kich thuoc hop le: 1500-6000 ky tu (merge nen cho phep lon hon T2B don)
+    if not (1500 <= len(merged_text) <= 6000):
+        return False
+
+    save_pair(txt_dir, json_dir, idx, merged_text, merged_ents)
+    return True
+
+
+def process_mixed_blocks(
+    t2b_saved_texts: List[str],  # text T2B da qua anchor+validate
+    t2b_saved_ents: List[List[Dict]],
+    blocks: List[Tuple],          # T2A blocks tu build_blocks
+    txt_dir: str,
+    json_dir: str,
+    saved_start: int,
+    merge_ratio: float = 0.6,
+) -> Tuple[int, int]:
+    """
+    Xu ly T2A blocks:
+    - merge_ratio (60%): merge voi T2B tuong ung -> 1 file lon
+    - phan con lai (40%): luu T2A rieng le
+
+    Tra ve (n_merged, n_standalone).
+    """
+    n_t2b = len(t2b_saved_texts)
+    n_blocks = len(blocks)
+    n_merge = int(n_blocks * merge_ratio)
+
+    # Xao tron blocks de phan phoi deu
+    indices = list(range(n_blocks))
+    random.shuffle(indices)
+    merge_idx  = set(indices[:n_merge])
+    alone_idx  = set(indices[n_merge:])
+
+    current_idx = saved_start
+    n_merged = 0
+    n_standalone = 0
+
+    # Pool T2B texts de merge (xoay vong neu it hon blocks)
+    t2b_pool = list(zip(t2b_saved_texts, t2b_saved_ents))
+
+    for i, (t2a_text, t2a_ents) in enumerate(blocks):
+        # Kiem bat bien T2A
+        ok = all(t2a_text[e["position"][0]:e["position"][1]] == e["text"]
+                 for e in t2a_ents)
+        if not ok:
+            continue
+
+        if i in merge_idx and t2b_pool:
+            # Lay T2B tuong ung (mod de khong out of range)
+            t2b_text, t2b_ents = t2b_pool[n_merged % len(t2b_pool)]
+            if merge_and_save(t2b_text, t2b_ents, t2a_text, t2a_ents,
+                              txt_dir, json_dir, current_idx):
+                current_idx += 1
+                n_merged += 1
+            else:
+                # Fallback: luu T2A rieng neu merge that bai
+                save_pair(txt_dir, json_dir, current_idx, t2a_text, t2a_ents)
+                current_idx += 1
+                n_standalone += 1
+        else:
+            save_pair(txt_dir, json_dir, current_idx, t2a_text, t2a_ents)
+            current_idx += 1
+            n_standalone += 1
+
+    return n_merged, n_standalone
+
 # ---------------------------------------------------------------------------
 # Sample diagnoses theo phan tang co trong so (S1 + BANGIAO §10)
 # ---------------------------------------------------------------------------
