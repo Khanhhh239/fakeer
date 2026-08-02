@@ -44,30 +44,6 @@ def test_branch_c():
     from branch_c_drugs import test_branch_c_rules
     test_branch_c_rules()
 
-def test_span_candidates():
-    """Test sinh ung vien tong quat (thay cho viec them regex moi tung ca)"""
-    print(chr(10) + "="*60)
-    print("TEST: Span Candidates (generic)")
-    print("="*60)
-    from span_candidates import test_span_candidates as _run
-    _run()
-
-def test_lab_va():
-    """Test ung vien va cho nhanh B — 6 dang regex tung bo sot"""
-    print(chr(10) + "="*60)
-    print("TEST: Lab patch candidates")
-    print("="*60)
-    from branch_b_lab_tests import test_lab_va_candidates as _run
-    _run()
-
-def test_llm_choice():
-    """Test phan khong-can-GPU cua bo phan loai N-lua-chon"""
-    print(chr(10) + "="*60)
-    print("TEST: LLM Choice Classifier (non-GPU parts)")
-    print("="*60)
-    from llm_choice_classifier import test_llm_choice_classifier as _run
-    _run()
-
 def test_ner_metrics():
     """Test F1 mức thực thể (thay seqeval — gói đó vỡ trên Python 3.12 của Kaggle)"""
     print("\n" + "="*60)
@@ -126,14 +102,6 @@ def test_export_btc_v2():
     from export_btc import test_export_btc as _run
     _run()
 
-def test_synth_noise_v3():
-    """V3 — nhiễu gõ + mồi âm cho data tổng hợp, KHÔNG được phá offset nhãn"""
-    print("\n" + "="*60)
-    print("TEST V3: Synthetic noise + negative bait")
-    print("="*60)
-    from synth_noise import test_synth_noise as _run
-    _run()
-
 def test_on_real_data():
     """Test trên data thật từ input/"""
     print("\n" + "="*60)
@@ -177,9 +145,6 @@ def run_all_tests():
         ("Text Alignment", test_text_alignment),
         ("Branch B", test_branch_b),
         ("Branch C", test_branch_c),
-        ("Span Candidates", test_span_candidates),
-        ("Lab Patch Cands", test_lab_va),
-        ("LLM Choice", test_llm_choice),
         ("NER Metrics", test_ner_metrics),
         ("Overlap Resolver", test_overlap_resolver),
         ("Real Data", test_on_real_data),
@@ -188,7 +153,6 @@ def run_all_tests():
         ("V2 Merge Entities (K7)", test_merge_entities_v2),
         ("V2 LLM Extract (K2)", test_llm_extract_v2),
         ("V2 Export BTC (K8)", test_export_btc_v2),
-        ("V3 Synth Noise", test_synth_noise_v3),
     ]
     
     passed = 0

@@ -1,3 +1,31 @@
+
+## TRẠNG THÁI DỰ ÁN (đọc trước tiên)
+
+**Kiến trúc đã xong — pipeline TRÍCH XUẤT (khác việc đang bàn giao):**
+Token hoa NER 5 loại trên dữ liệu đề thi thật đã chạy được end-to-end trên Kaggle,
+điểm WER thật **24.67** (tăng từ 19.07 của bản đầu). Kiến trúc chi tiết ở
+`PIPELINE_V2.md`. Code: `src/segment_units.py`, `span_anchor.py`, `merge_entities.py`,
+`llm_extract.py`, `export_btc.py` + `notebooks/ner_v2_phase1.ipynb`,
+`ner_v2_phase2.ipynb` (chạy trên Kaggle GPU, đã test). **KHÔNG đụng vào mảng này.**
+
+**Việc đang bàn giao ở file này — SINH DATA HUẤN LUYỆN TỔNG HỢP:**
+Mục đích: có data để fine-tune encoder riêng (hiện encoder chỉ train trên
+PhoNER_COVID19, chỉ biết 2/5 loại). **CHƯA CÓ DÒNG CODE NÀO cho phần này** —
+chỉ mới có KẾT QUẢ NGHIÊN CỨU + KHO NGUỒN (liệt kê đủ ở §2) + PROMPT đã
+đo thử trên Ollama và sửa đến bản ổn (§3.2, §3.4). Toàn bộ §3–§10 dưới đây là
+đặc tả cần hiện thực hoá, KHÔNG phải mô tả cái đã chạy được.
+
+**Việc CẦN LÀM NGAY, theo thứ tự — xem chi tiết từng bước ở §10:**
+1. Viết module T0 (§3.1) — không cần GPU
+2. Viết `anchor_all` + cổng kiểm định (§4–§5) — không cần GPU
+3. Viết module T2A dựng khối cấu trúc (§3.3) — không cần GPU
+4. **Gán tay 5–10 file `input/*.txt` làm tập kiểm định** — BẮT BUỘC, chưa làm
+5. Viết notebook Kaggle gọi Qwen3-8B qua vLLM cho T1+T2B (§3.2, §3.4)
+6. Chạy thử 20–30 file, soi tay, chỉnh ngưỡng cổng theo số đo thật
+7. Chạy full ~500 file → train lại encoder → đo trên tập kiểm định bước 4
+
+---
+
 # Bàn giao: Sinh dữ liệu huấn luyện NER tổng hợp
 
 Tài liệu duy nhất cho việc này. Thay thế `YEUCAU_DATA.md`, `PLAN_SYNTHETIC_DATA_V2.md`,
