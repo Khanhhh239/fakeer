@@ -64,36 +64,76 @@ def retrieve_validate_tx(tx_list: List[str]) -> List[str]:
 
 def retrieve_validate_th(th_list: List[str], thuoc_norm_set: Set[str]) -> List[str]:
     """
-    Loc TH: loai ten thuoc bi a.
-    - Giu: co trong thuoc_norm_set (RxNorm + nhom thuoc chung)
-    - Giu: nhom thuoc chung tieu Viet (khang sinh, corticoid, ...)
-    - Loai: ten bi a ro rang (dai > 6 tu, khong tim duoc trong KB)
-    Khong loc qua chat -- LLM co the tra ve ten dung nhung khong trong KB.
+    Loc TH: loai thuoc chung chung va thuoc khong khop RxNorm.
+    - Loai: nhom thuoc mo ho ("thuoc dac tri", "thuoc uong", ten > 4 tu khong khop KB)
+    - Giu: khop RxNorm fuzzy >= 0.72 HOAC la ten hoat chat ngan <= 3 tu
     """
-    _THUOC_CHUNG_NORM = {
+    from difflib import SequenceMatcher
+
+    # Nhom thuoc CHUNG CHUNG -> loai (model se bija ra nhung tu nay)
+    _LOAI_CHUNG = {
+        "thuoc dac tri", "thuoc uong", "thuoc tiem", "thuoc bo",
+        "thuoc nam", "thuoc dong y", "thuoc ha sot", "thuoc giam dau",
+        "thuoc khang viem", "thuoc tang cuong", "thuoc boi ngoai da",
+        "thuoc dat", "thuoc nho mat", "thuoc nho tai",
+        "antibiotic",  # tieng Anh -> loai
+        "nhu tuong codein",  # bịa
+    }
+
+    # Nhom hop le du khong trong RxNorm (linkable=False theo bàn giao)
+    _THUOC_CHUNG_OK = {
         _norm(t) for t in [
-            "khang sinh", "thuoc ha sot", "thuoc giam dau", "corticoid",
-            "thuoc loi tieu", "thuoc ha ap", "vitamin", "dich truyen",
-            "insulin", "thuoc chong dong", "paracetamol", "ibuprofen",
-            "amoxicillin", "metformin", "omeprazole", "aspirin",
+            "kháng sinh", "corticoid", "vitamin", "dịch truyền", "insulin",
+            "paracetamol", "ibuprofen", "aspirin", "amoxicillin", "metformin",
+            "omeprazole", "furosemid", "furosemide", "atorvastatin",
+            "thuốc lợi tiểu", "thuốc hạ áp", "thuốc chống đông",
+            "thuốc an thần", "thuốc chống nôn", "thuốc đái tháo đường",
+            "thuốc giãn phế quản", "thuốc trị nấm", "thuốc chống dị ứng",
+            "kháng histamin", "thuốc ức chế bơm proton", "thuốc kháng acid",
+            "thuốc ho", "thuốc long đờm", "statin", "thuốc chống lao",
+            "thuốc kháng virus", "thuốc sốt rét", "thuốc chống động kinh",
+            "thuốc chống trầm cảm", "thuốc chống loạn thần",
         ]
     }
+
     out = []
     for th in th_list:
         t = th.strip()
         if not t or len(t) < 2:
             continue
-        norm = _norm(t)
-        # Giu neu trong KB hoac nhom thuoc chung
-        if norm in thuoc_norm_set or norm in _THUOC_CHUNG_NORM:
+        n = _norm(t)
+
+        # Loai nhom chung chung
+        if n in _LOAI_CHUNG:
+            continue
+        if len(t.split()) > 5:
+            continue  # ten qua dai, thuong la mo ta
+
+        # Giu neu trong nhom ok
+        if n in _THUOC_CHUNG_OK:
             out.append(t)
             continue
-        # Giu neu ten ngan (<= 4 tu) -- co the la ten thuoc hop le chua trong KB
-        if len(t.split()) <= 4:
+
+        # Giu neu khop RxNorm fuzzy >= 0.72
+        if n in thuoc_norm_set:
             out.append(t)
             continue
-        # Loai neu qua dai va khong trong KB
-    return out or th_list  # fallback: neu loc het thi giu nguyen
+        # Fuzzy check (chi check neu <= 3 tu de nhanh)
+        if len(t.split()) <= 3:
+            best = max(
+                (SequenceMatcher(None, n, c).ratio() for c in thuoc_norm_set
+                 if abs(len(n) - len(c)) < 4),
+                default=0.0
+            )
+            if best >= 0.72:
+                out.append(t)
+                continue
+
+        # Ten ngan (<= 2 tu) chua xac dinh -> giu (tranh loai nham)
+        if len(t.split()) <= 2:
+            out.append(t)
+
+    return out or th_list[:2]  # fallback neu loc het
 
 
 # ---------------------------------------------------------------------------
@@ -147,31 +187,27 @@ def build_kb(kb_dir: str) -> Dict:
 
 PROMPT_T1 = """CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT. Không dùng chữ Hán, chữ Trung Quốc, tiếng Anh.
 
-Bạn là bác sĩ Việt Nam. Với chẩn đoán được cho, liệt kê các khái niệm y khoa thường đi kèm trong bệnh án.
+Bạn là bác sĩ Việt Nam. Với chẩn đoán được cho, liệt kê các khái niệm y khoa thường đi kèm.
 
 ĐỊNH DẠNG: mỗi dòng một mục, đúng dạng MÃ|nội dung
   TC = triệu chứng người bệnh cảm nhận hoặc bác sĩ quan sát được
-  TH = tên thuốc điều trị
-  TX = tên xét nghiệm / thăm dò / thủ thuật chẩn đoán
+  TH = tên thuốc điều trị (tên hoạt chất hoặc nhóm thuốc)
 
-SỐ LƯỢNG: 5 dòng TC, 3 dòng TH, 3 dòng TX. Tổng đúng 11 dòng.
+SỐ LƯỢNG: 5 dòng TC, 5 dòng TH. Tổng đúng 10 dòng.
 
 QUY TẮC:
 1. Chỉ ghi TÊN, không ghi động từ đi kèm.
    ĐÚNG: TH|amoxicillin        SAI: TH|Tiêm amoxicillin
-2. TH phải là tên thuốc CÓ THẬT. Không bịa.
-   ĐÚNG: TH|paracetamol, TH|kháng sinh, TH|corticoid
+2. TH phải là tên thuốc CÓ THẬT. Không bịa. Ưu tiên tên hoạt chất quốc tế.
+   ĐÚNG: TH|paracetamol, TH|kháng sinh, TH|corticoid, TH|omeprazole, TH|metformin
    SAI:  TH|antirôsin, TH|thuốc đặc trị
-3. TX phải là TÊN một xét nghiệm/thủ thuật cụ thể.
-   ĐÚNG: TX|công thức máu, TX|siêu âm ổ bụng, TX|nội soi dạ dày
-   SAI:  TX|Phương pháp chẩn đoán lâm sàng
-4. TC phải là điều người bệnh CẢM THẤY hoặc bác sĩ THẤY.
-   ĐÚNG: TC|sốt cao, TC|đau vùng thượng vị
+3. TC phải là điều người bệnh CẢM THẤY hoặc bác sĩ THẤY.
+   ĐÚNG: TC|sốt cao, TC|đau vùng thượng vị, TC|mệt mỏi
    SAI:  TC|Sử dụng miệng lưỡi cắn
-5. Mọi mục phải liên quan TRỰC TIẾP tới chẩn đoán.
-6. Mỗi mục 1-5 từ, viết như bác sĩ ghi bệnh án.
-7. KHÔNG chú thích tên nước ngoài trong ngoặc. SAI: TC|sợ nước (hydrophobia)
-8. Viết xong 11 dòng thì DỪNG.
+4. Mọi mục phải liên quan TRỰC TIẾP tới chẩn đoán.
+5. Mỗi mục 1-5 từ, viết như bác sĩ ghi bệnh án.
+6. KHÔNG chú thích tên nước ngoài trong ngoặc.
+7. Viết xong 10 dòng thì DỪNG.
 
 VÍ DỤ — chẩn đoán "Viêm dạ dày":
 TC|đau vùng thượng vị
@@ -182,37 +218,39 @@ TC|chán ăn
 TH|omeprazole
 TH|thuốc trung hoà acid
 TH|amoxicillin
-TX|nội soi dạ dày
-TX|test hơi thở tìm H. pylori
-TX|công thức máu
+TH|kháng sinh
+TH|thuốc giảm đau
 
 BÂY GIỜ LÀM VỚI CHẨN ĐOÁN: "{diagnosis}"
 
-Nhắc lại: chỉ tiếng Việt có dấu. Không chữ Hán. Không tiếng Anh. Không chú thích trong ngoặc."""
+Nhắc lại: chỉ tiếng Việt có dấu. Không chữ Hán. Không tiếng Anh. Không ngoặc."""
 
 
-def build_t1_prompts(sample_diag: List[Dict], qtok) -> List[str]:
+def build_t1_prompts(sample_diag: List[Dict], qtok=None) -> List[str]:
+    """qtok=None khi dung Ollama (khong can tokenizer)."""
     prompts = []
     for d in sample_diag:
         content = PROMPT_T1.format(diagnosis=d["term"])
-        msgs = [{"role": "user", "content": content}]
-        p = qtok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        if "/no_think" not in p:
-            p += "/no_think\n"
+        if qtok is not None:
+            msgs = [{"role": "user", "content": content}]
+            p = qtok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+            if "/no_think" not in p:
+                p += "/no_think\n"
+        else:
+            p = content  # Ollama nhan raw prompt
         prompts.append(p)
     return prompts
 
 
 def parse_t1_batch(outs, sample_diag: List[Dict],
                    thuoc_norm_set: Set[str]) -> List[Dict]:
-    """
-    Parse T1 outputs + retrieve-validate TH/TX.
-    Returns list of {diagnosis: dict, scenario: {tc, th, tx}}.
-    """
+    """Parse T1 outputs -- chi lay TC + TH, khong lay TX."""
     scenarios = []
     for d, out in zip(sample_diag, outs):
-        tc, th, tx = [], [], []
-        for line in out.outputs[0].text.strip().split("\n"):
+        # Ho tro ca vllm output object lan string (Ollama)
+        text = out.outputs[0].text.strip() if hasattr(out, "outputs") else str(out).strip()
+        tc, th = [], []
+        for line in text.split("\n"):
             line = line.strip()
             if "|" not in line:
                 continue
@@ -225,21 +263,12 @@ def parse_t1_batch(outs, sample_diag: List[Dict],
                 tc.append(content)
             elif code == "TH":
                 th.append(content)
-            elif code == "TX":
-                tx.append(content)
 
-        # Retrieve-validate
-        th_clean = retrieve_validate_th(th[:3], thuoc_norm_set)
-        tx_clean = retrieve_validate_tx(tx[:3])
-
+        th_clean = retrieve_validate_th(th[:5], thuoc_norm_set)
         if len(tc) >= 3:
             scenarios.append({
                 "diagnosis": d,
-                "scenario": {
-                    "tc": tc[:5],
-                    "th": th_clean[:3],
-                    "tx": tx_clean[:3],
-                },
+                "scenario": {"tc": tc[:5], "th": th_clean[:5]},
             })
     return scenarios
 
@@ -273,15 +302,13 @@ Trân trọng!
 CÁCH VIẾT TIÊU ĐỀ MỤC:
 ĐÚNG: 1. Bệnh dại là bệnh gì
 SAI:  1. [Bệnh này là gì] — giải thích:
-Tiêu đề là câu ngắn bình thường. Không dùng dấu ngoặc vuông. Không dùng gạch ngang mô tả lại.
+Tiêu đề là câu ngắn bình thường. Không dùng dấu ngoặc vuông.
 
 CÁC CỤM SAU PHẢI XUẤT HIỆN NGUYÊN VĂN trong bài, không sửa một chữ:
 {danh_sach_cum}
 
-NGOÀI RA, 2 cụm sau CŨNG phải xuất hiện nguyên văn (đưa vào tự nhiên như mọi cụm khác):
-{bait_thuoc}
-{bait_xetnghiem}
-Lưu ý: 2 cụm trên KHÔNG phải thuốc/xét nghiệm thật, chỉ nhắc qua, không dùng làm phần điều trị chính.
+YÊU CẦU NỘI DUNG BẮT BUỘC — đưa tự nhiên vào bài, không đánh dấu:
+{context_am}
 
 QUY TẮC:
 - Tổng bài 500 đến 700 từ. Mỗi mục đủ 4 đến 6 câu hoàn chỉnh.
@@ -289,47 +316,95 @@ QUY TẮC:
 - Cấm câu trấn an rỗng không kèm thông tin y khoa.
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu.
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
+- Mô phỏng lỗi gõ bệnh án thật: dính liền {n_glue} chỗ (bỏ dấu cách), chèn *** {n_mask} chỗ.
+  Chỉ áp dụng ở phần văn xuôi, KHÔNG đụng vào các cụm bắt buộc ở trên.
 
 QUY TẮC NGÔN NGỮ:
 - Tên thuốc quốc tế: omeprazole, amoxicillin, furosemid — GIỮ NGUYÊN tên La-tinh.
 - Viết tắt xét nghiệm: CRP, AST, ALT, HbA1c, WBC — GIỮ NGUYÊN.
 - Tên bệnh, triệu chứng: LUÔN viết tiếng Việt, KHÔNG chú thích tiếng Anh.
-  ĐÚNG: "sốt cao", "viêm dạ dày"   SAI: "sốt cao (fever)", "viêm dạ dày (gastritis)"
 
 Nhắc lại: tiếng Việt có dấu, thuốc/xét nghiệm giữ tên quốc tế, không chữ Hán, không ngoặc vuông."""
 
 
-def build_t2b_inputs(scenarios: List[Dict], kb: Dict, qtok) -> List[Tuple]:
+def build_t2b_inputs(scenarios: List[Dict], kb: Dict, qtok=None) -> List[Tuple]:
     """
-    Xay dung list (prompt, required_ents, bait_t, bait_x) cho T2B.
-    - KHONG them XN random ngoai T1 (S6)
-    - Bait duoc loc tranh trung voi entities (S4)
-    - 10-12 cum, khong qua 15 (tranh C2)
+    Xay dung inputs cho T2B.
+    - TC + TH (da validate) lay tu T1
+    - TEN_XET_NGHIEM: random 0-5 tu xetnghiem_ten.txt (KB chinh xac) -> vao required
+    - Thuoc am + XN am: xuat hien trong van ban nhung KHONG vao required (ca am)
+    - context_am: yeu cau sinh ca phu dinh / tien su gia dinh / tien su ca nhan
+    - n_glue / n_mask: nhieu dua vao prompt
     """
-    am_thuoc    = kb["am_thuoc"]
-    am_xetnghiem = kb["am_xetnghiem"]
+    xn_names  = kb["xn_names"]
+    am_thuoc  = kb["am_thuoc"]
+    am_xn     = kb["am_xetnghiem"]
+
+    # Context am pools
+    _PHU_DINH = [
+        "Người bệnh phủ nhận không bị {tc}.",
+        "Không ghi nhận {tc} tại thời điểm khám.",
+        "Tiền sử không có {tc}.",
+    ]
+    _GIA_DINH = [
+        "Gia đình có người thân mắc bệnh tương tự.",
+        "Bố/mẹ có tiền sử bệnh lý tim mạch.",
+        "Có yếu tố di truyền trong gia đình.",
+        "Anh chị em ruột không có bệnh lý tương tự.",
+    ]
+    _TIEN_SU = [
+        "Bệnh nhân có tiền sử dị ứng thuốc.",
+        "Tiền sử phẫu thuật không có gì đặc biệt.",
+        "Không có tiền sử bệnh mãn tính.",
+        "Đã từng điều trị bệnh lý khác trước đây.",
+    ]
 
     inputs = []
     for sc in scenarios:
-        s = sc["scenario"]
+        s   = sc["scenario"]
         diag = sc["diagnosis"]["term"]
 
-        # Build entity list chi tu T1, khong them XN random
+        # required entities
         ents = [(diag, "CHAN_DOAN")]
         for t in s["tc"]: ents.append((t, "TRIEU_CHUNG"))
         for t in s["th"]: ents.append((t, "THUOC"))
-        for t in s["tx"]: ents.append((t, "TEN_XET_NGHIEM"))
+
+        # Inject 0-5 XN chinh xac tu KB
+        n_xn = random.randint(0, 5)
+        if n_xn > 0:
+            for xn in random.sample(xn_names, min(n_xn, len(xn_names))):
+                ents.append((xn, "TEN_XET_NGHIEM"))
+
         random.shuffle(ents)
-        ents = ents[:12]  # toi da 12 cum, tranh C2
+        ents = ents[:14]
 
-        # Chon bait khong trung voi entities (S4)
-        ent_surfaces_lower = {e[0].lower() for e in ents}
-        safe_am_t = [x for x in am_thuoc if x.lower() not in ent_surfaces_lower] or am_thuoc
-        safe_am_x = [x for x in am_xetnghiem if x.lower() not in ent_surfaces_lower] or am_xetnghiem
-        bt = random.choice(safe_am_t)
-        bx = random.choice(safe_am_x)
+        # Thuoc am + XN am -> chi them vao danh sach cum (van ban), KHONG vao required
+        n_am_t = random.randint(1, 2)
+        n_am_x = random.randint(1, 2)
+        am_t_chosen = random.sample(am_thuoc, min(n_am_t, len(am_thuoc)))
+        am_x_chosen = random.sample(am_xn, min(n_am_x, len(am_xn)))
 
-        # Tieu de muc lay tu kịch ban
+        # Danh sach cum = required + am (am chi xuat hien trong van ban, khong gan nhan)
+        cum_lines = [f"- {surface}" for surface, _ in ents]
+        cum_lines += [f"- {x}  (nhắc qua, không phải thuốc/xét nghiệm chính)" for x in am_t_chosen]
+        cum_lines += [f"- {x}  (nhắc qua, không phải thuốc/xét nghiệm chính)" for x in am_x_chosen]
+        danh_sach = "\n".join(cum_lines)
+
+        # Context am: random chon 1-3 loai
+        ctx_parts = []
+        if random.random() < 0.6 and s["tc"]:
+            tc_sample = random.choice(s["tc"])
+            ctx_parts.append(random.choice(_PHU_DINH).format(tc=tc_sample))
+        if random.random() < 0.5:
+            ctx_parts.append(random.choice(_GIA_DINH))
+        if random.random() < 0.5:
+            ctx_parts.append(random.choice(_TIEN_SU))
+        context_am = ("Trong bài cần đề cập tự nhiên:\n" +
+                      "\n".join(f"- {c}" for c in ctx_parts)) if ctx_parts else ""
+
+        n_glue = random.randint(1, 4)
+        n_mask = random.randint(0, 2)
+
         tds_pool = [
             f"{diag} là bệnh gì",
             f"Triệu chứng của {diag}",
@@ -337,23 +412,27 @@ def build_t2b_inputs(scenarios: List[Dict], kb: Dict, qtok) -> List[Tuple]:
             f"Điều trị {diag}",
             f"Phòng ngừa {diag}",
             "Khi nào cần gặp bác sĩ",
+            f"Tiên lượng của {diag}",
         ]
         tds = random.sample(tds_pool, 4)
 
-        danh_sach = "\n".join(f"- {surface}" for surface, _ in ents)
         prompt_text = PROMPT_T2B.format(
             danh_sach_cum=danh_sach,
-            bait_thuoc=bt,
-            bait_xetnghiem=bx,
+            context_am=context_am,
+            n_glue=n_glue, n_mask=n_mask,
             tieu_de_1=tds[0], tieu_de_2=tds[1],
             tieu_de_3=tds[2], tieu_de_4=tds[3],
         )
-        msgs = [{"role": "user", "content": prompt_text}]
-        p = qtok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-        if "/no_think" not in p:
-            p += "/no_think\n"
 
-        inputs.append((p, ents, bt, bx))
+        if qtok is not None:
+            msgs = [{"role": "user", "content": prompt_text}]
+            p = qtok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+            if "/no_think" not in p:
+                p += "/no_think\n"
+        else:
+            p = prompt_text
+
+        inputs.append((p, ents, "", ""))
     return inputs
 
 
@@ -533,7 +612,11 @@ def _try_save_batch(texts: List[str], t2b_inputs: List[Tuple],
             continue
 
         text_noisy = apply_noise(text, ents)
-        save_pair(txt_dir, json_dir, saved_start + saved, text_noisy, ents)
+        # Fuzzy filter: loai entity khong khop KB
+        ents_filtered = fuzzy_filter_entities(
+            ents, kb["thuoc_pool"], kb["xn_names"]
+        )
+        save_pair(txt_dir, json_dir, saved_start + saved, text_noisy, ents_filtered)
         saved += 1
 
     return saved, reject_counts, failed_idx
@@ -770,3 +853,121 @@ def sample_diagnoses(chandoan_pool: List[Dict], n_needed: int) -> List[Dict]:
     n_actual = min(len(selected), n_needed)
     return selected[:n_actual]
 
+
+# ---------------------------------------------------------------------------
+# Fuzzy filter: loai entity khong khop KB
+# ---------------------------------------------------------------------------
+
+def _fuzzy_best(text: str, candidates: List[str], threshold: float = 0.70) -> float:
+    """Tra ve ratio cao nhat khi so text voi tat ca candidates."""
+    from difflib import SequenceMatcher
+    n = _norm(text)
+    best = 0.0
+    for c in candidates:
+        r = SequenceMatcher(None, n, _norm(c)).ratio()
+        if r > best:
+            best = r
+        if best >= threshold:
+            break
+    return best
+
+
+def fuzzy_filter_entities(
+    entities: List[Dict],
+    thuoc_pool: List[Dict],
+    xn_names: List[str],
+    thuoc_threshold: float = 0.72,
+    xn_threshold: float = 0.75,
+) -> List[Dict]:
+    """
+    Loai THUOC khong khop rxnorm va loai TEN_XET_NGHIEM khong khop xetnghiem_ten.txt.
+    TRIEU_CHUNG va CHAN_DOAN giu nguyen (khong can khop KB theo BANGIAO §1.3).
+    KET_QUA_XET_NGHIEM giu nguyen (sinh bang luat, luon dung).
+    """
+    thuoc_terms = [t["term"] for t in thuoc_pool]
+    # Them nhom thuoc chung (linkable=False) -- luon giu
+    _CHUNG_NORM = {
+        _norm(t) for t in [
+            "kháng sinh", "corticoid", "thuốc hạ sốt", "thuốc giảm đau",
+            "paracetamol", "ibuprofen", "vitamin", "dịch truyền",
+            "insulin", "metformin", "omeprazole", "aspirin", "amoxicillin",
+        ]
+    }
+
+    kept = []
+    for e in entities:
+        etype = e["type"]
+
+        if etype in ("TRIEU_CHUNG", "CHAN_DOAN", "KET_QUA_XET_NGHIEM"):
+            kept.append(e)
+            continue
+
+        if etype == "THUOC":
+            # Giu neu la nhom thuoc chung
+            if _norm(e["text"]) in _CHUNG_NORM:
+                kept.append(e)
+                continue
+            score = _fuzzy_best(e["text"], thuoc_terms, thuoc_threshold)
+            if score >= thuoc_threshold:
+                kept.append(e)
+            # else: loai
+
+        elif etype == "TEN_XET_NGHIEM":
+            score = _fuzzy_best(e["text"], xn_names, xn_threshold)
+            if score >= xn_threshold:
+                kept.append(e)
+            # else: loai
+
+        else:
+            kept.append(e)  # loai la khac -> giu
+
+    return kept
+
+
+# ---------------------------------------------------------------------------
+# Ollama support -- test local voi qwen2.5:8b
+# ---------------------------------------------------------------------------
+
+def ollama_generate_batch(prompts: List[str], model: str = "qwen2.5:8b",
+                          temperature: float = 0.7, max_tokens: int = 1100) -> List[str]:
+    """
+    Goi Ollama API (localhost:11434) theo batch tuan tu.
+    Tra ve list[str] text output tuong ung.
+    """
+    import urllib.request
+    import json as _json
+
+    url = "http://localhost:11434/api/generate"
+    results = []
+    for i, prompt in enumerate(prompts):
+        payload = _json.dumps({
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": temperature, "num_predict": max_tokens},
+        }).encode()
+        req = urllib.request.Request(url, data=payload,
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                data = _json.loads(resp.read())
+                results.append(data.get("response", ""))
+        except Exception as ex:
+            print(f"  Ollama error prompt {i}: {ex}")
+            results.append("")
+        if (i + 1) % 10 == 0:
+            print(f"  Ollama: {i+1}/{len(prompts)} done")
+    return results
+
+
+class _OllamaOut:
+    """Wrapper de compatible voi vllm output object."""
+    def __init__(self, text):
+        self.outputs = [type("o", (), {"text": text})()]
+
+
+def ollama_generate(prompts: List[str], model: str = "qwen2.5:8b",
+                    temperature: float = 0.7, max_tokens: int = 1100):
+    """Tra ve list gia lap vllm output de dung chung ham process_t2b_outputs."""
+    texts = ollama_generate_batch(prompts, model, temperature, max_tokens)
+    return [_OllamaOut(t) for t in texts]

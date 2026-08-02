@@ -217,6 +217,38 @@ def build_block(
         # Them dong trong giua cac muc
         bb.add_newlines(blank_lines)
 
+    # Them section am (phu dinh, tien su, thuoc am, XN am) -- KHONG gan nhan
+    # 60% chance them section nay de data phong phu hon
+    if random.random() < 0.60:
+        _AM_HEADINGS = [
+            "Tiền sử bệnh", "Tiền sử cá nhân", "Tiền sử gia đình",
+            "Dấu hiệu âm tính", "Không ghi nhận", "Phủ nhận",
+        ]
+        _PHU_DINH_ITEMS = [
+            "không sốt", "không ho", "không khó thở", "không đau ngực",
+            "không buồn nôn", "không nôn", "không tiêu chảy", "không phù",
+            "không đau đầu", "không chóng mặt", "phủ nhận dị ứng thuốc",
+            "không có tiền sử bệnh mãn tính", "gia đình không có bệnh lý tương tự",
+            "không hút thuốc lá", "không uống rượu bia",
+        ]
+        _TIEN_SU_ITEMS = [
+            "tiền sử khỏe mạnh", "chưa phẫu thuật lần nào",
+            "gia đình có người mắc bệnh tim mạch", "bố bị tiểu đường tuýp 2",
+            "mẹ có tiền sử tăng huyết áp", "anh chị em không có bệnh lý đặc biệt",
+            "dị ứng penicillin", "không dị ứng thuốc đã biết",
+        ]
+        heading_am = random.choice(_AM_HEADINGS)
+        h_line = build_heading_line(heading_am, None, colon_str, case_fmt)
+        bb.add_raw(h_line)
+        items_am = random.sample(
+            _PHU_DINH_ITEMS + _TIEN_SU_ITEMS,
+            random.randint(2, 5)
+        )
+        for item in items_am:
+            line, _ = build_bullet_line(item, bullet_char, indent_str)
+            bb.add_raw(line)  # add_raw: KHONG gan nhan
+        bb.add_newlines(1)
+
     return bb.build()
 
 
