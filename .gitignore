@@ -11,3 +11,7 @@ model_outputs/
 kaggle_datasets/
 *.log
 .DS_Store
+
+# rác của công cụ chỉnh sửa
+.token-optimizer/
+*.bak

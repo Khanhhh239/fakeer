@@ -153,6 +153,19 @@ QUY TẮC:
 - Cấm viết dạng đối thoại qua lại. Người bệnh chỉ hỏi một lần ở đầu bài.
 - Không dùng gạch đầu dòng trong phần trả lời, viết thành đoạn văn.
 
+MÔ PHỎNG LỖI GÕ CỦA BỆNH ÁN THẬT — làm đúng 4 việc sau:
+1. Dính liền 1 đến 2 chỗ: bỏ dấu cách giữa hai từ, ví dụ viết "bệnh dạithường"
+   thay vì "bệnh dại thường", hoặc "chẩn đoán.Bệnh nhân" thay vì có dấu cách.
+2. Che 1 đến 2 chỗ bằng dấu sao, ví dụ "Kháng sinh nhóm ***" hoặc
+   "đã dùng **** trước đó", giống chỗ bị mờ trong bệnh án chụp lại.
+3. Nhắc tới đúng MỘT lần cụm này, coi như thứ người bệnh hỏi thêm hoặc
+   thứ cần phân biệt, KHÔNG phải thuốc điều trị: {bait_thuoc}
+4. Nhắc tới đúng MỘT lần cụm này, coi như thủ thuật hay việc đã làm,
+   KHÔNG phải xét nghiệm: {bait_xetnghiem}
+
+TUYỆT ĐỐI KHÔNG được dính từ hay chèn dấu sao vào BÊN TRONG các cụm bắt buộc
+ở danh sách trên. Các cụm đó phải giữ nguyên vẹn từng chữ.
+
 QUY TẮC NGÔN NGỮ — PHÂN BIỆT RÕ:
 ĐƯỢC PHÉP dùng thuật ngữ y khoa chuẩn bằng chữ La-tinh/viết tắt quốc tế,
 vì bác sĩ Việt Nam viết như vậy trong bệnh án thật:
@@ -171,6 +184,41 @@ không dịch tên bệnh/triệu chứng sang tiếng Anh, không chữ Hán, k
 ```
 
 > **Đã bỏ 2 cụm** `kích thích` và `kháng sinh` khỏi danh sách (còn 13). Lý do ở mục dưới.
+
+---
+
+## Ghép nhiễu — HAI TẦNG, không phải một
+
+Nhiễu đến từ hai nguồn, cố ý tách bạch vì chúng mạnh ở hai chỗ khác nhau:
+
+| Tầng | Ai làm | Được gì | Mất gì |
+|---|---|---|---|
+| **1. LLM sinh** (chỉ thị trong prompt) | Qwen | Nhiễu nằm **tự nhiên** trong mạch văn, mồi âm được đặt vào câu có nghĩa | **Không kiểm soát được** — có thể quên, có thể lỡ tay dính vào cụm bắt buộc |
+| **2. Code chèn** (`src/synth_noise.py`) | Code | **Đảm bảo tuyệt đối** offset đúng, tỷ lệ chính xác, không bao giờ chạm span | Máy móc hơn, câu chèn theo khuôn cố định |
+
+**Thứ tự bắt buộc: LLM trước → neo nhãn → code chèn sau.**
+
+```python
+raw   = llm.generate(prompt_with_noise)        # tầng 1: Qwen tự nhiên
+ents  = anchor_all(raw, required)              # NEO NHÃN ở đây, trên text đã có nhiễu LLM
+if ents is None: retry()                       # LLM lỡ phá cụm bắt buộc -> sinh lại
+text, ents = inject_negative_bait(raw, ents, baits, n=2)   # tầng 2
+text, ents = inject_text_noise(text, ents, rate=0.03)
+validate(text, ents)                           # bất biến: text[a:b] == nhãn
+```
+
+**Vì sao neo nhãn Ở GIỮA, không phải cuối:** nếu neo sau khi code chèn nhiễu thì
+cụm bắt buộc có thể đã bị dính từ (`omeprazolemỗi`) và không tìm thấy nữa. Neo
+trước khi chèn thì code biết chính xác vùng nào cấm động vào.
+
+**Vì sao LLM vẫn phải sinh nhiễu dù code làm được:** nhiễu của code chèn vào chỗ
+ngẫu nhiên nên đôi khi hơi vô lý; nhiễu của LLM nằm đúng chỗ người ta hay gõ sai.
+Trộn cả hai thì phân bố giống đề thi hơn. Nếu LLM quên thì code vẫn bù được — nên
+tầng 2 là lưới an toàn, không phải phần chính.
+
+**Xử lý khi LLM lỡ phá cụm bắt buộc:** `anchor_all` trả `None` khi tìm được
+<60% số cụm → sinh lại tối đa 3 lần → vẫn hỏng thì bỏ ca đó. Không bao giờ
+"sửa gần đúng" vì sẽ tạo nhãn lệch.
 
 ---
 

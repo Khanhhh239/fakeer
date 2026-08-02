@@ -126,6 +126,14 @@ def test_export_btc_v2():
     from export_btc import test_export_btc as _run
     _run()
 
+def test_synth_noise_v3():
+    """V3 — nhiễu gõ + mồi âm cho data tổng hợp, KHÔNG được phá offset nhãn"""
+    print("\n" + "="*60)
+    print("TEST V3: Synthetic noise + negative bait")
+    print("="*60)
+    from synth_noise import test_synth_noise as _run
+    _run()
+
 def test_on_real_data():
     """Test trên data thật từ input/"""
     print("\n" + "="*60)
@@ -180,6 +188,7 @@ def run_all_tests():
         ("V2 Merge Entities (K7)", test_merge_entities_v2),
         ("V2 LLM Extract (K2)", test_llm_extract_v2),
         ("V2 Export BTC (K8)", test_export_btc_v2),
+        ("V3 Synth Noise", test_synth_noise_v3),
     ]
     
     passed = 0
